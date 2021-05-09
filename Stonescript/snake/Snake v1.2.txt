@@ -1,0 +1,269 @@
+//v1.2
+
+
+//////////     initialize     //////////
+
+
+disable hud
+disable player
+
+var timer = 0
+var x
+var y
+
+var initialize = true
+var box
+var data
+
+var headX = screen.w / 2
+var headY = screen.h / 2
+var direction
+var currentDirection
+var length
+var speed = 10
+
+var food = false
+var foodX
+var foodY
+var range = headX % 2
+
+var bodyX = ""
+var bodyY = ""
+var color = "#FFFFFF"
+
+var score = 0
+var highestScore = 0
+var highestScoreX = screen.w - 1
+
+var gameover = false
+var rainbow = false
+var ouroboros = -1
+var start = true
+
+?initialize
+	box = "╔"
+	for x = 3..screen.w
+		box = box + "═"
+	box = box + "╗\n"
+	for y = 3..screen.h
+		box = box + "║"
+		for x = 3..screen.w
+				box = box + " "
+		box = box + "║\n"
+	box = box + "╚"
+	for x = 3..screen.w
+		box = box + "═"
+	box = box + "╝"
+	
+	data = ""
+	for i = 1..screen.h - 2 //y
+		for j = 1..screen.w - 2 //x
+			?j % 2 = range
+				x = "0" + j
+				x = string.sub(x, string.size(x) - 2)
+				y = "0" + i
+				y = string.sub(y, string.size(y) - 2)
+				data = data + x + y
+	
+	initialize = false
+>`0,0,@box@
+>`0,1,@data@
+
+func setSpeed()
+	for i = 0..9
+		?i * i <= score / 10
+			speed = math.clamp(10 - i, 0, 10)
+			
+func reset()
+	timer = 0
+	x = ""
+	y = ""
+	
+	food = false
+	
+	headX = screen.w / 2
+	headY = screen.h / 2
+	direction = 8
+	currentDirection = 8
+	length = 7
+	
+	bodyX = ""
+	bodyY = ""
+	color = "#FFFFFF"
+	
+	score = 0
+	gameover = false
+	rainbow = false
+	ouroboros = -1
+	start = false
+	
+	setSpeed()
+
+
+//////////     food     //////////
+
+
+?food
+	>`@foodX@,@foodY@,#rainFF,ʘ
+:
+	for i = 0..1
+		foodX = 1 + rng % (screen.w - 2)
+		foodY = 1 + rng % (screen.h - 2)
+
+		x = "0" + foodX
+		x = string.sub(x, string.size(x) - 2)
+		y = "0" + foodY
+		y = string.sub(y, string.size(y) - 2)
+		
+		?foodX % 2 ! range |
+		^string.indexof(bodyX, x) % 2 = 0 & string.indexof(bodyY, y) % 2 = 0 |
+		^foodX = headX & foodY = headY
+			i--
+	food = true
+
+
+//////////     move     //////////
+
+
+
+?timer = 0 & !gameover & !start
+	bodyX = headX + bodyX
+	?headX < 10
+		bodyX = "0" + bodyX
+	?string.size(bodyX) > length * 2
+		bodyX = string.sub(bodyX, 0, length * 2)
+
+	bodyY = headY + bodyY
+	?headY < 10
+		bodyY = "0" + bodyY
+	?string.size(bodyY) > length * 2
+		bodyY = string.sub(bodyY, 0, length * 2)
+
+	?direction = 2
+		headY++
+		currentDirection = 2
+	:?direction = 4
+		headX = headX - 2
+		currentDirection = 4
+	:?direction = 6
+		headX = headX + 2
+		currentDirection = 6
+	:?direction = 8
+		headY--
+		currentDirection = 8
+
+	?headX <= 0 | headX >= screen.w - 1 |
+	^headY <= 0 | headY >= screen.h - 1
+		headY = math.clamp(headY, 1, screen.h - 2)
+		headX = math.clamp(headX, 1, screen.w - 2)
+		gameover = true
+		
+	?headX = foodX & headY = foodY
+		score++
+		length++
+		setSpeed()
+		food = false
+
+>`@headX@,@headY@,O
+
+
+//////////     body     //////////
+
+
+?length > 0
+	for i = 0..length - 1
+		?string.size(bodyX) > i * 2 & string.size(bodyY) > i * 2
+			x = int.parse(string.sub(bodyX, i * 2, 2))
+			y = int.parse(string.sub(bodyY, i * 2, 2))
+			
+			?ouroboros ! -1
+				color = (i + ouroboros) % 7
+				?color = 0
+					color = "#FF0000"
+				:?color = 1
+					color = "#FFA500"
+				:?color = 2
+					color = "#FFFF00"
+				:?color = 3
+					color = "#008000"
+				:?color = 4
+					color = "#00FFFF"
+				:?color = 5
+					color = "#0000FF"
+				:?color = 6
+					color = "#4B0082"
+				:?color = 7
+					color = "#800880"
+
+			>`@x@,@y@,@color@,o
+			?x = headX & y = headY
+				?!gameover & i = length - 1
+					ouroboros = 0
+				gameover = true
+
+
+//////////     input     //////////
+
+
+?key = back
+	reset()
+?key = down & currentDirection ! 8
+	direction = 2
+:?key = left & currentDirection ! 6
+	direction = 4
+:?key = right & currentDirection ! 4
+	direction = 6
+:?key = up & currentDirection ! 2
+	direction = 8
+
+
+//////////     title     //////////
+
+
+?gameover
+	y = screen.h / 4
+	x = -numberLength(score) / 2
+	>c-5,@y@,[X] restart
+
+	?ouroboros ! -1
+		ouroboros = (ouroboros + 1) % 7
+
+	?score > highestScore
+		highestScore = score
+		highestScoreX = screen.w - numberLength(score)
+		rainbow = true
+
+	y = -y
+	?rainbow
+		>c@x@,@y@,#rainFF,@score@
+		y--
+		>c-2,@y@,#rainFF,n e w
+	:
+		>c@x@,@y@,@score@
+:?start
+	y = screen.h / 4
+	>c-5,@y@,[X] start
+
+
+//////////     display score and update timer     //////////
+
+
+>`0,0,@score@
+>`@highestScoreX@,0,#rainFF,@highestScore@
+timer = (timer + 1) % speed
+
+
+////////////////////////////////////////
+
+
+func numberLength(n)
+	?n < 10
+		return 1
+	:?n < 100
+		return 2
+	:?n < 1000
+		return 3
+	:?n < 10000
+		return 4
+	:?n < 100000
+		return 5

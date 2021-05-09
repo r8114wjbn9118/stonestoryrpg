@@ -1,0 +1,86 @@
+var foeMaxHp
+var foeHp
+var foeArmor
+var bossPhase = 0
+
+var DPS = 0
+var maxDPS = 0
+var damage = 0
+var dpsCount = 0
+var dpsTimer = 1
+
+var globalDPS = 0
+var globalMaxDPS = 0
+var globalDamage = 0
+var globalDpsCount = 0
+var globalDpsTimer = 1
+
+var cache
+
+?loc.loop
+    initializeDPS()
+
+    initializeGlobalDPS()
+
+?foe.count
+    ?foe = boss
+        ?foe = phase1
+            cache = 1
+        :?foe = phase2
+            cache = 2
+        :?foe = phase3
+            cache = 3
+        :
+            cache = -1
+        
+        ?bossPhase ! cache
+            initializeDPS()
+            bossPhase = cache
+        
+
+	damage = foeHp - foe.hp + foeArmor - foe.armor
+    ?damage < 0
+        damage = 0
+:
+    damage = 0
+
+dpsCount = dpsCount + damage
+?bossPhase ! 0
+    globalDpsCount = globalDpsCount + damage
+
+DPS = dpsCount * 30 / dpsTimer
+?DPS > maxDPS & dpsTimer > 90
+    maxDPS = DPS
+
+globalDPS = globalDpsCount * 30 / globalDpsTimer
+?globalDPS > globalMaxDPS & globalDpsTimer > 90
+    globalMaxDPS = globalDPS
+
+update()
+
+
+
+func update()
+    updateFoeState()
+    ?ai.enabled & foe.distance < 25
+        ?dpsCount ! 0
+            dpsTimer++
+        ?globalDpsCount ! 0
+            globalDpsTimer++
+
+func updateFoeState()
+	foeHp = foe.hp
+	foeMaxHp = foe.maxhp
+	foeArmor = foe.armor
+
+func initializeDPS()
+    DPS = 0
+    maxDPS = 0
+    dpsCount = 0
+    dpsTimer = 1
+    
+func initializeGlobalDPS()
+    globalDPS = 0
+    globalMaxDPS = 0
+    globalDpsCount = 0
+    globalDpsTimer = 1

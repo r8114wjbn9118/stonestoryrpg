@@ -1,0 +1,281 @@
+// data // 資料 //
+
+// Poison	∞
+// Vigor	♥
+// Æther	*
+// Fire		φ
+// Ice		❄
+
+// player buff
+
+// potion
+//
+// W:vampiric:600
+// ʘ:berserk:300
+// o:strength:300
+// ?:invisibility:450
+// !:lucky_crit:180
+// x:lucky_mult:180
+// @:experience:900
+
+// bardiche
+//
+// o:bardiche_buff_aoe_chance:60
+// o:bardiche_buff_crit_chance:60
+// o:bardiche_buff_crit_mult:60
+// o:bardiche_buff_move_speed:60
+
+// Blade of the Fallen God
+// ·:smite:2400
+
+// player debuff
+
+// rocky
+// ∞:dysangelos_debuff_damage:1800
+// φ:debuff_dot:530
+// ❄:debuff_chill:960
+
+// caves
+// ∞:debuff_duration_damage
+//
+// caves(boss)
+// ∞:spider_debuff_damage:660
+
+// mushroom
+// ♥:dysangelos_debuff_damage:2700
+
+// halls(boss)
+// *:pallas_phase2_debuff:1200
+
+// ridge(boss)
+// ❄:debuff_yeti_chill:450
+// ❄:debuff_move_speed:180
+
+// temple(boss)
+// ∞:debuff_duration_damage:3000000
+
+// foe buff
+
+// ♥:buff_protection:900
+// ∞:spider_buff_damage:100000
+
+// foe debuff
+
+// ∞:debuff_damage
+// φ:debuff_dot
+// ❄:debuff_chill
+
+
+var vampiricTimer = 0
+var berserkTimer = 0
+var strengthTimer = 0
+var invisibilityTimer = 0
+var luckyTimer = 0
+var experienceTimer = 0
+var bardicheTimer = 0
+var smiteCount = 0
+var smiteTimer = 0
+var poisonCount = 0
+var poisonTimer = 0
+var fireCount = 0
+var fireTimer = 0
+var iceCount = 0
+var iceTimer = 0
+var aetherCount = 0
+var aetherTimer = 0
+var vigorCount = 0
+var vigorTimer = 0
+
+
+var buffString
+var data
+var stringStartIndex
+var stringEndIndex
+var dataStartIndex
+var dataEndIndex
+var symbol
+var name
+var number
+var timer
+
+
+
+
+
+func playerBuffs()
+    vampiricTimer = 0
+    berserkTimer = 0
+    strengthTimer = 0
+    invisibilityTimer = 0
+    luckyTimer = 0
+    experienceTimer = 0
+    bardicheTimer = 0
+    smiteCount = 0
+    smiteTimer = 0
+
+    ?buffs.count
+        initializeStringIndex()
+        buffString = buffs.string
+        for i = 1..2
+            processString()
+
+            ?symbol = "W" | name = "vampiric"
+                vampiricTimer = timer
+
+            :?symbol = "ʘ" | name = "berserk"
+                berserkTimer = timer
+
+            :?symbol = "o" & name = "strength"
+                strengthTimer = timer
+
+            :?symbol = "?" | name = "invisibility"
+                invisibilityTimer = timer
+
+            :?symbol = "!" | name = "lucky_crit" |
+            ^symbol = "x" | name = "lucky_mult"
+                luckyTimer = timer
+
+            :?symbol = "@" | name = "experience"
+                experienceTimer = timer
+
+            :?symbol = "o" &
+            ^(name = "bardiche_buff_aoe_chance" |
+            ^name = "bardiche_buff_crit_chance" |
+            ^name = "bardiche_buff_crit_mult" |
+            ^name = "bardiche_buff_move_speed")
+                bardicheTimer = timer
+
+            :?symbol = "·" | name = "smite"
+                smiteCount = number
+                smiteTimer = timer
+
+            ?stringEndIndex ! -1
+                i--
+
+
+func playerDeBuffs()
+    poisonCount = 0
+    poisonTimer = 0
+    fireCount = 0
+    fireTimer = 0
+    iceCount = 0
+    iceTimer = 0
+    aetherCount = 0
+    aetherTimer = 0
+    vigorCount = 0
+    vigorTimer = 0
+
+    ?debuffs.count
+        initializeStringIndex()
+        buffString = debuffs.string
+        for i = 1..2
+            processString()
+
+            ?symbol = "∞" &
+            ^( (loc = "rocky" & name = "dysangelos_debuff_damage") |
+            ^name = "debuff_duration_damage")
+                poisonCount = poisonCount + number
+                poisonTimer = timer
+
+            :?symbol = "φ" | name = "debuff_dot"
+                fireCount = number
+                fireTimer = timer
+
+            :?symbol = "❄" | name = "debuff_chill" | name = "debuff_yeti_chill"
+                iceCount = number
+                iceTimer = timer
+
+            :?symbol = "*" | name = "pallas_phase2_debuff"
+                aetherCount = number
+                aetherTimer = timer
+
+            :?loc = mushroom & (symbol = "♥" | name = "dysangelos_debuff_damage")
+                vigorCount = number
+                vigorTimer = timer
+            
+            ?stringEndIndex ! -1
+                i--
+
+
+func foeBuffs()
+    vigorTimer = 0
+    poisonTimer = 0
+
+    ?foe.buffs.count
+        initializeStringIndex()
+        buffString = foe.buffs.string
+        for i = 1..2
+            processString()
+
+            ?loc = "rocky" & (symbol = "♥" | name = "buff_protection")
+                vigorTimer = timer
+
+            ?stringEndIndex ! -1
+                i--
+
+
+func foeDeBuffs()
+    poisonCount = 0
+    poisonTimer = 0
+    fireCount = 0
+    fireTimer = 0
+    iceCount = 0
+    iceTimer = 0
+
+    ?foe.debuffs.count
+        initializeStringIndex()
+        buffString = foe.debuffs.string
+        for i = 1..2
+            processString()
+            
+            ?symbol = "∞" | name = "debuff_damage"
+                poisonCount = number
+                poisonTimer = timer
+            :?symbol = "φ" | name = "debuff_dot"
+                fireCount = number
+                fireTimer = timer
+            :?symbol = "❄" | name = "debuff_chill"
+                iceCount = number
+                iceTimer = timer
+
+            ?stringEndIndex ! -1
+                i--
+
+
+
+
+func initializeStringIndex()
+    stringStartIndex = 0
+    stringEndIndex = 0
+
+func initializeData()
+    dataStartIndex = 0
+    dataEndIndex = 0
+    symbol = null
+    name = null
+    number = null
+    timer = null
+
+func processString()
+    initializeData()
+       
+    stringEndIndex = string.indexof(buffString, ",", stringStartIndex)
+    ?stringEndIndex = -1
+        data = string.sub(buffString, stringStartIndex)
+    :
+        data = string.sub(buffString, stringStartIndex, stringEndIndex - stringStartIndex)
+    stringStartIndex = stringEndIndex + 1
+
+
+    symbol = string.sub(data, 0, 1)
+
+    dataEndIndex = string.indexof(data, ":", 2)
+    name = string.sub(data, 2, dataEndIndex - 2)
+
+    dataStartIndex = dataEndIndex + 1
+    dataEndIndex = string.indexof(data, ":", dataStartIndex)
+    number = string.sub(data, dataStartIndex, dataEndIndex - dataStartIndex)
+    number = int.parse(number)
+       
+    timer = string.sub(data, dataEndIndex + 1)
+    timer = int.parse(timer)

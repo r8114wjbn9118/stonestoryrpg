@@ -1,0 +1,200 @@
+//幽靈
+?foe = immune_to_physical //免疫物理(幽靈) 
+	e = 8
+	?foe.distance <= 7 & (foe.count > 10 | playerState >= 3) //幽靈攻擊範圍 and (敵人數量多 or 半血)
+		useMindStoneSkill() //後退
+
+// boss戰更新
+func updateBossFight()
+	?bossFight
+		?bossFight < 0
+			?!foe.count 
+				bossFight = 1
+				timer = 0
+				t = 0
+				a = 0
+		:?foe = boss
+			?bossConvert = -1 & foeState % 10 = 0
+				bossConvert = 0
+				bossAttackLoop = -1
+				bossDissolve = true
+			:?foe.hp <= 0 & bossConvert >= 0
+				bossFight++
+				bossConvert = -1
+				timer = 0
+				t = 0
+				a = 0
+		?foe.count & ai.enabled
+			timer++
+			t++
+
+//舊計時
+// boss戰開始檢測 / boss攻擊間隔(-?) //
+func bossFightStart()
+	?!bossFight & (foe = boss | foe = wasp | (loc = halls & pos.x > 460)) & foe.count
+		?loc.stars > 10
+			bossFight = -1
+			?loc = deadwood
+				bossFirstAttackTime = 112 //114
+			:?loc = caves
+				bossFirstAttackTime = 250 //314
+				bossAttackInterval = 60
+			:?loc = mushroom
+				bossFirstAttackTime = 38 //192
+				bossAttackInterval = 150
+			:?loc = halls
+				bossFirstAttackTime = 244 //368
+				bossAttackInterval = 120
+			:?loc = mine
+				bossFirstAttackTime = 93 //737
+				bossAttackInterval = 631
+		:
+			bossFight = 1
+			?loc = deadwood
+				bossFirstAttackTime = 112 //114
+			:?loc = caves
+				bossFirstAttackTime = 229 //293
+				bossAttackInterval = 60
+			:?loc = mushroom
+				bossFirstAttackTime = 8 //192 160
+				bossAttackInterval = 150
+			:?loc = halls
+				bossFirstAttackTime = 148 //368 272
+				bossAttackInterval = 120
+			:?loc = mine
+				bossFirstAttackTime = 46 //670
+				bossAttackInterval = 631
+
+func bossFightInDeadwood()
+		?timer = 112
+			useMindStoneSkill()
+
+func bossFightInCaves()
+	?timer > bossFirstAttackTime & (timer - bossFirstAttackTime) % (bossAttackInterval / (1 - foeDeBuffs.iceCount / 12)) = 0
+		useMindStoneSkill()
+
+func bossFightInHalls()
+			?foe = phase2
+				?foe.count > 1
+					e = 6
+				?timer > bossFirstAttackTime & (timer - bossFirstAttackTime) % bossAttackInterval = 0
+					useMindStoneSkill()
+					?skillActionDuration > 0
+						skillActionDuration = skillActionDuration + 6
+
+func bossFightInHalls()
+			?foe = phase2
+				?foe.count > 1
+					e = 6
+				//?timer > bossFirstAttackTime & (timer - bossFirstAttackTime) % bossAttackInterval = 0
+				//	useMindStoneSkill()
+				//	?skillActionDuration > 0
+				//		skillActionDuration = skillActionDuration + 6
+
+func bossFightInTemple()
+		?foe.distance <= 5
+			symbol = draw.getsymbol(screen.w / 2 + 6, screen.h / 2 - 7)
+		:
+			symbol = draw.getsymbol(screen.w / 2 + 4, screen.h / 2 - 7)
+		?symbol = "("
+			?bossConvert = 1
+				bossConvert = 0
+			:?mindStoneSkillCD <= 0
+				useMindStoneSkill()
+				bossConvert = 1
+
+
+
+//眼睛檢測
+func bossFightInRocky()
+		//2階觸手檢測
+			//冰 ice
+			?draw.getsymbol(screen.w / 2 + 18, screen.h / 2) = "❄" | foe = ice
+				loadout 2
+				currentEquip = 2
+				skillActionDuration = skillActionDuration + 2
+
+			//心 vigor
+			:?draw.getsymbol(screen.w / 2 + 2, screen.h / 2 - 6) = " " //= "♥"
+				loadout 1
+				currentEquip = 1
+				skillActionDuration = skillActionDuration + 2
+
+			//火 fire
+			:?draw.getsymbol(screen.w / 2 + 18, screen.h / 2 - 6) = "φ"
+				loadout 4
+				currentEquip = 4
+				skillActionDuration = skillActionDuration + 2
+		
+		//3階技能檢測
+			?draw.getsymbol(screen.w / 2 + 2 - foe.distance, screen.h / 2 - 4) = "║"
+				useMindStoneSkill()
+				bossConvert = 1
+				?mindStoneSkillCD = MindStoneSkillCooldown
+					skillActionDuration = skillActionDuration + 6
+			?27 + foeDeBuffs.iceCount * 6) //| draw.getsymbol(screen.w / 2 + 15, screen.h / 2 - 4) = "/"
+				useMindStoneSkill()
+				bossConvert = 1
+				?skillActionDuration > 0 //mindStoneSkillCD = MindStoneSkillCooldown
+					skillActionDuration = skillActionDuration + 3
+
+
+
+func bossFightInRidge()
+	?bossFight < 0
+		?foe.distance <= 5
+			e = 6
+		:
+			useDashSkill()
+	:			
+		?playerDebuffsCount < debuffs.count
+			bossConvert = 1
+		:?playerHp > hp
+			bossConvert = 0
+		?foe = boss & foeState % 10 <= 1
+			?foe.distance <= 5
+				e = 102
+			:
+				useDashSkill()
+		:?bossConvert = 1
+			?foe.count > 1
+				e = 6
+			:?needIce()
+				e = 8
+			:
+				e = 7
+		:
+			?foe.distance <= 10
+				?foe.count > 1
+					e = 6
+				:
+					?playerState > 2 | needIce()
+						e = 3
+					:
+						e = 6
+					?foeState % 10 = 2
+						useBardicheSkill()
+			:
+				useDashSkill()
+
+
+
+//墮神活動
+func bossFightInHalls()
+	?bossFight < 0
+		useBladeSkill()
+		?pos.x >= 460 - (maxhp - hp) / 2
+			useMindStoneSkill()
+		?bossConvert = 0
+			?playerState = 4 & pos.x >= 450
+				e = 6
+			:?foe.distance > 10 & playerState ! 4
+				equipL ouroboros
+				equipR quest
+				e = -1
+			:?!skillActionDuration
+				equip ice staff *10 +15 dI
+				e = 11
+		:
+			equip ice staff *10 +15 dI
+			e = 11

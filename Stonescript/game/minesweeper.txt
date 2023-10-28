@@ -1,0 +1,393 @@
+
+//SSRPG Version: 3.49.4
+//Version: 1.0
+//author: xx
+
+//only PC
+
+/* instruction:
+//	import minesweeper
+
+if you feel stuck while running, can use
+//	var minesweeper = new minesweeper
+//	minesweeper.run(positive real number)
+to change update frequency per frame
+
+update frequency per frame is default to 60
+*/
+
+var text
+
+var data = []
+var width = 9
+var height = 9
+
+var mine = []
+var mineCount = 0
+var mineCountText = 0
+
+var flagCount = 0
+var targetCount = 0
+
+var boxW = 0
+var boxH = 0
+var boxX = 0
+var boxY = 0
+
+var state = "initialize"
+
+var difficulty = [[8,8,10], [16,16,40], [30,16,99]]
+var difficultyText = [["#0000ff","  [beginner]"], ["#00ff00","[intermediate]"], ["#ff0000","   [expert]"]]
+var difficultyTextLength = 14
+var difficultyIndex = difficulty.Count() - 1
+
+var timer = 0
+var secTimer = 0
+var secTimerText = 0
+
+var cx = 0
+var cy = 0
+var cx2 = 0
+var cy2 = 0
+var cl = []
+var ct = 0
+var cc = 0
+
+func main(fre)
+	?boxW > 0 & boxH > 0
+		draw.Box(boxX, boxY, boxW, boxH, #FFFFFF, 1)
+		draw.Box(boxX + boxW - 5, boxY - 2, 5, 3, #FFFFFF, 1)
+		draw.Box(boxX, boxY - 2, 5, 3, #FFFFFF, 1)
+
+	?state ! "title" & state ! "initialize"
+		?data.Count()
+			>`@boxX+1@,@boxY+1@,@text@
+		>`@boxX+boxW-4@,@boxY-1@,@secTimerText@
+		>`@boxX+1@,@boxY-1@,@mineCountText@
+	
+	for i = 1..fre
+		?state = "playing"
+			?playing()
+				break
+		:?state = "processVicinityData"
+			?processVicinityData()
+				break
+		:?state = "title"
+			?title()
+				break
+		:?state = "win"
+			?win()
+				break
+		:?state = "drawMines"
+			?drawMines()
+				break
+		:?state = "gameover"
+			?gameover()
+				break
+		:?state = "setupData"
+			?setupData()
+				break
+		:?state = "setupTarget"
+			?setupTarget()
+				break
+		:?state = "initialize"
+			?initialize()
+				break
+
+	?key = bumpRBegin
+		createMap()
+	:?key = backEnd
+		changeState("initialize")
+
+
+
+func initialize()
+	setupLevel(difficulty.Count() - 1)
+	changeState("title")
+	return true
+
+func initcache()
+	cx = 0
+	cy = 0
+	cx2 = 0
+	cy2 = 0
+	cl.Clear()
+	ct = 0
+	cc = 0
+
+func setupLevel(i)
+	width = difficulty[i][0]
+	height = difficulty[i][1]
+	mineCount = difficulty[i][2]
+
+	mineCountText = numberToString(mineCount)
+
+	flagCount = 0
+	targetCount = width * height - mineCount
+	
+	boxW = width + 2
+	boxH = height + 2
+	boxX = Math.clamp((screen.w - boxW) / 2, 0, screen.w - boxW)
+	boxY = Math.clamp((screen.h - boxH) / 2 + 1, 0, screen.h - boxH)
+
+func createMap()
+	setupLevel(difficultyIndex)
+
+	timer = 0
+	secTimer = 0
+	secTimerText = "000"
+
+	initcache()
+	text = ""
+	data.Clear()
+	mine.Clear()
+	changeState("setupTarget")
+
+
+func title()
+	showTitleText("rainFF", "M I N E S W E E P E R")
+
+	cx = boxX + (boxW - difficultyTextLength) / 2
+	cy = boxY + boxH * 2 / 3
+	>`@cx-1@,@cy@,#ffffff,>
+
+	?difficultyIndex - 1 >= 0
+		>`@boxX + boxW / 2@,@cy-2@,▲
+		>`@cx@,@cy-1@,@difficultyText[difficultyIndex-1][0]@,@difficultyText[difficultyIndex-1][1]@
+
+	>`@cx@,@cy@,@difficultyText[difficultyIndex][0]@,@difficultyText[difficultyIndex][1]@
+
+	?difficultyIndex + 1 < difficulty.Count()
+		>`@cx@,@cy+1@,@difficultyText[difficultyIndex+1][0]@,@difficultyText[difficultyIndex+1][1]@
+		>`@boxX + boxW / 2@,@cy+2@,▼
+
+	showGuideText("99ccff", "X-GoToTitle  C-StartGame")
+
+	?key = up | key = down
+		?key = upEnd | key = downEnd
+			ct = 0
+		:
+			?!ct
+				?key = up
+					difficultyIndex = (difficultyIndex + difficulty.Count() - 1) % difficulty.Count()
+				:?key = down
+					difficultyIndex = (difficultyIndex + 1) % difficulty.Count()
+			ct = (ct + 1) % 5
+
+	return true
+
+func win()
+	showTitleText("rainFF", "Y O U  W I N")
+	showGuideText("99ccff", "X-GoToTitle  C-RestartGame")
+	return true
+
+func gameover()
+	showTitleText("cc0000", "gameover")
+	showGuideText("99ccff", "X-GoToTitle  C-RestartGame")
+	return true
+
+func showTitleText(color, str)
+	>`@boxX + (boxW - string.Size(str)) / 2@,@boxY + boxH / 3 - 2@,#@color@,@str@
+
+func showGuideText(color, str)
+	>`@boxX + (boxW - string.Size(str)) / 2@,@boxY + boxH - 2@,#@color@,@str@
+
+
+
+func drawMines()
+	?mine.Count()
+		var z = mine[0]
+		cx = z[0]
+		cy = z[1]
+		whiteDataToScreen(cx, cy, "@")
+		mine.RemoveAt(0)
+	:
+		changeState("gameover")
+	return true
+
+func setupData()
+	?data.Count() < height * width
+		?ct ! data.Count()
+			?data.Count() % width = 0 & data.Count() ! 0
+				text += "\n"
+			cx = data.Count() % width
+			cy = math.FloorToInt(data.Count() / width)
+
+			?isTarget(cx, cy)
+				cc = -8
+			:
+				cx2 = cx - 1
+				cy2 = cy - 1
+				cc = 0
+
+			ct = data.Count()
+
+		:?cc < 0
+			cc++
+			?cc = 0
+				addData("@")
+
+		:?cy2 > cy + 1
+			?cc
+				addData(cc)
+			:
+				addData("#")
+
+		:
+			?!(cx2 = cx & cy2 = cy) & isTarget(cx2, cy2)
+				cc++
+			cx2++
+			?cx2 > cx + 1
+				cx2 = cx - 1
+				cy2++
+	:
+		changeState("playing")
+		return true
+	return false
+
+func addData(s)
+	data.Add([s, 0])
+	text += "o"
+
+func setupTarget()
+	?mine.Count() < mineCount
+		var x = rng % width
+		var y = rng % height
+		?!isTarget(x, y)
+			mine.Add([x, y])
+	:
+		changeState("setupData")
+		return true
+	return false
+
+func isTarget(x, y)
+	?mine.Count() & targetInRange(x, y)
+		for i = 0..mine.Count() - 1
+			?x = mine[i][0] & y = mine[i][1]
+				return true
+	return false
+
+
+
+func playing()
+	>`@boxX@,@boxY+boxH-1@,Z-flag
+
+	timer = (timer + 1) % 30
+	?!timer
+		secTimer++
+		secTimerText = numberToString(secTimer)
+
+	?key = primaryBegin | key = bumpLBegin
+		var inputX = input.x - (boxX + 1)
+		var inputY = input.y - (boxY + 1)
+
+		?inRange(input.x,input.y,boxX+1,boxY+1,width,height)
+			?key = bumpLBegin
+				flagTile(inputX, inputY)
+			:?key = primaryBegin & openTile(inputX, inputY)
+				return false
+	return true
+
+func flagTile(x,y)
+	var z = data[getIndex(x, y, 0)]
+	?!z[1]
+		z[1] = -1
+		whiteDataToScreen(x, y, "▶")
+		addFlagCount(1)
+	:?z[1] < 0
+		z[1] = 0
+		whiteDataToScreen(x, y, "o")
+		addFlagCount(-1)
+	return false
+
+func openTile(x, y)
+	var z = data[getIndex(x, y, 0)]
+	?z[0] = "@"
+		whiteDataToScreen(x, y, z[0])
+
+		initcache()
+		changeState("drawMines")
+
+		return true
+	:?!z[1]
+		z[1] = 1
+		targetCount--
+
+		whiteDataToScreen(x, y, z[0])
+
+		?z[0] = "#"
+			?state ! "processVicinityData"
+				initcache()
+				changeState("processVicinityData")
+			cl.Add([x, y])
+			return true
+		:?!targetCount
+			changeState("win")
+	return false
+
+func whiteDataToScreen(x, y, n)
+	var z = getIndex(x, y, 1)
+	text = string.sub(text, 0, z) + n + string.sub(text, z + 1)
+
+
+func processVicinityData()
+	?!cc
+		?ct < cl.Count()
+			var z = cl[ct]
+			cx = z[0]
+			cy = z[1]
+
+			cc = 8
+			ct++
+		:
+			changeState("playing")
+			return true
+	:
+		cx2 = cx + getoffset(cc + 1)
+		cy2 = cy + getoffset(cc + 3)
+
+		?targetInRange(cx2, cy2)
+			openTile(cx2, cy2)
+
+		cc--
+	return false
+
+func getoffset(n)
+	n = n % 8
+	?n % 4
+		?n < 4
+			return -1
+		:
+			return 1
+	:
+		return 0
+
+func targetInRange(x, y)
+	return inRange(x, y, 0, 0, width, height)
+
+func inRange(x, y, X, Y, W, H)
+	return x >= X & x < X + W & y >= Y & y < Y + H
+
+func addFlagCount(n)
+	flagCount += n
+	mineCountText = numberToString(math.max(0, mineCount - flagCount))
+
+func changeState(str)
+	state = str
+
+
+func run(fre)
+	main(fre)
+
+main(60)
+
+
+func getIndex(x, y, t)
+	?t
+		return (width + 2) * y + x
+	:
+		return width * y + x
+
+func numberToString(n)
+	n = "00" + n
+	return string.sub(n, string.size(n) - 3)

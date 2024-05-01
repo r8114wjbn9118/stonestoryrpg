@@ -1,0 +1,124 @@
+var Data = import battle/data
+var Skill = import battle/skill
+var Buff = import battle/buff/main
+
+func begin()
+	return
+
+func init()
+	brew wood + bronze
+	Data.ei = 308
+	return
+
+func action()
+	?screen.i = 1 & foe.distance <= 35
+		Skill.BladeSkill_screenMove()
+	?screen.x >= 69 + 55
+		?Skill.useBladeSkill()
+			return true
+
+	?item.potion = "berserk"
+		activate potion
+		return true
+
+	?Skill.starPickup()
+		return true
+
+	?foe.distance > 23
+		Data.ei = 912
+		return true
+
+	return false
+
+func run()
+	?Skill.useQuarterstaffSkill()
+		return
+	?Skill.useAetherTalismanSkill()
+		return
+
+	Data.ei = 912
+	//Skill.restoreArmor_run()
+
+func attack()
+
+	?foe.distance <= 5
+
+		?buffs.string = "smite"
+			Data.ei = 515
+		:
+			Data.ei = 700
+	:?foe.distance <= 10
+		Data.ei = 22
+	:
+		Data.ei = 912
+	Skill.useDashSkill()
+
+func bossFight_0()
+	//?foe.distance < 7
+	//	Data.ei = 903
+	//:
+	//	Data.ei = 308
+	//return
+	?foe.distance <= 5
+		Skill.useVoidweaverSkill()
+
+		?Data.playerBuffs.smiteCount
+			Data.ei = 515
+		:
+			Data.ei = 430
+
+	Skill.useDashSkill()
+
+func bossFight_1()
+	?foe.distance <= 5
+		?Data.playerBuffs.smiteCount & Buff.needAddFoeState()
+			?Buff.needIce()
+				Data.ei = 195
+			:?Buff.needFire()
+				Data.ei = 160
+			:?Buff.needPoison()
+				Data.ei = 140
+		:
+			Data.ei = 903
+		//:?Data.playerState ! 0
+		//	Data.ei = 192
+		//:
+	:
+		Data.ei = 912
+		Skill.useDashSkill()
+
+	//time = 33
+	?foe.state = 32 & foe.time = 32 + Buff.iceEffect()
+		Skill.useMindStoneSkill()
+
+	
+
+func bossFight_2()
+	?!foe.count
+		Skill.useDashSkill()
+		return
+
+	?foe.state = 1
+		?!Data.skillAction
+			?Skill.useBardicheSkill()
+				return
+			?Skill.useMaskSkill()
+				return
+			?Skill.useHeavyHammerSkill_power()
+				return
+
+		Data.ei = 912
+		return
+
+	?foe.distance <= 5
+		
+		Data.ei = 903
+		Skill.useArmSkill()
+		return
+		?foe.state = 33
+			Data.ei = 903
+		:
+			Data.ei = 606
+	:
+		Data.ei = 912
+		Skill.useDashSkill()

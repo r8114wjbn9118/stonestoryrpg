@@ -1,0 +1,19 @@
+var Data = import battle/data
+var Skill = import battle/skill
+var Buff = import battle/buff/main
+
+func init()
+	return
+
+func action()
+	return false
+
+func run()
+	Skill.useQuarterstaffSkill()
+	Data.ei = 93
+
+func attack()
+	return
+
+func bossFight()
+	return

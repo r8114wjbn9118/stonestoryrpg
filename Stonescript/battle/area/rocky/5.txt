@@ -1,0 +1,104 @@
+var Data = import battle/data
+var Skill = import battle/skill
+var Buff = import battle/buff/main
+
+
+func init()
+	Data.ei = 912
+
+func action()
+	return false
+
+func run()
+	/*
+	?screen.i = 1
+		screen.Next()
+	?screen.x > 124
+		?Skill.useMaskSkill()
+			return
+	*/
+
+	Data.ei = 863
+	?Skill.useQuarterstaffSkill()
+		return
+	?Skill.useFireTalismanSkill()
+		equipR trisk
+		return
+	/*
+	?Skill.starPickup()
+		return
+	*/
+
+func bossFight_1()		
+	?Data.skillAction = 1
+		?item.potion = "lucky"
+			activate potion
+			return
+	//?Skill.useMaskSkill()
+	//	return
+	?item.GetCooldown("hammer") <= 0
+		?foe.state = 117 & foe.time = 36
+			Skill.useHeavyHammerSkill_power()
+	:?item.GetCooldown("bardiche") <= 0 //& foe.time >= 10
+		?!Skill.useBardicheSkill()
+			Skill.useDashSkill()
+		return
+
+	?foe.state = -1
+		//Skill.useMaskSkill()
+		?foe.time >= 83
+			Skill.useDashSkill()
+		return
+
+	?Data.bossAction < 0 | !ai.enabled
+		Data.ei = 912
+		return
+	/*
+	?foe.distance <= 18
+		Data.ei = 414
+	:
+		Skill.useDashSkill()
+	*/
+	?foe.distance <= 5
+		//Skill.useBardicheSkill()
+		Data.ei = 104
+	://?foe.state = 32
+		Skill.useDashSkill()
+	
+
+func bossFight_2()
+	//?foe.state = -1
+		//?Skill.useMaskSkill()
+		//	return
+
+	?Data.bossAction = -1
+		Data.ei = 912
+		return
+
+	?foe.distance <= 10
+		?foe = poison
+			Data.ei = 105
+		:?foe = vigor
+			Data.ei = 101
+		:?foe = aether
+			Data.ei = 102
+		:?foe = fire
+			Data.ei = 103
+		:?foe = ice
+			Data.ei = 104
+	:
+		Skill.useDashSkill()
+
+func bossFight_3()
+	?Data.bossAction = -1 | !foe.count
+		Data.ei = 911
+		?time >= 355
+			Skill.useQuarterstaffSkill()
+		return
+
+	?foe.distance <= 10
+		Data.ei = 104
+	:
+		Skill.useDashSkill()
+	
+	Skill.useCinderwispSkill()

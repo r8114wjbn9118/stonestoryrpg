@@ -1,0 +1,624 @@
+var Data = import battle/data
+
+var aacL = false
+var aacR = false
+
+var moonState = 0
+var moonIndex = 0
+
+// 更換裝備 //
+
+//短劍	1	(100~199)
+//大劍	2	(200~299)
+//盾	3	(300~399)
+//弩	4	(400~499)
+//棍	5	(500~599)
+//鎚	6	(600~699)
+//其他	 	(700~899)
+//遺物	9	(900~999)
+
+//D		0
+//A		6
+//特殊
+//混合
+
+//無	0
+//毒	1
+//心	2
+//乙太	3
+//火	4
+//冰	5
+func change()
+	?determineChangeEquip()
+		?Data.ei >= 0
+			?Data.ei >= 10
+				moonState = 0
+				//equipName: [str,str]
+				var en = getEquipName(Data.ei)
+				?en[0] = en[1]
+					equip @en[0]@
+				:?moonState = 2
+					>`0,1,@moonState@ @moonIndex@
+					?moonIndex = moonState
+						equipL @en[0]@
+						equipR @en[1]@
+					:?moonIndex
+						equipL moon
+						equipR @en[moonIndex]@
+					:
+						equipL @en[moonIndex]@
+						equipR moon
+				:
+					?en[0]
+						equipL @en[0]@
+					?en[1]
+						equipR @en[1]@
+			:?Data.ei >= 0
+				loadoutEquip(Data.ei)
+
+		Data.currentEquip = Data.ei
+		return true
+	return false
+
+func loadoutEquip(ei)
+	?ei = 0 //加速石+蛇石
+		loadout 0
+	:?ei = 1 //心劍+毒劍
+		loadout 1
+	:?ei = 2 //心劍+火劍
+		loadout 2
+	:?ei = 3 //心劍+冰劍
+		loadout 3
+	:?ei = 4 //心劍+乙太劍
+		loadout 4
+	:?ei = 5 //心劍+衝鋒盾
+		loadout 5
+	:?ei = 6 //月牙
+		loadout 6
+	:?ei = 7 //連射弩
+		loadout 7
+	:?ei = 8 //dI冰棍
+		loadout 8
+	:?ei = 9 //
+		loadout 9
+
+func getEquipName(ei)
+	?ei < 100 //預設/組合裝備 (10~99)
+		return getEquipName_0xx(ei)
+	:?ei < 200 //短劍 1 (100~199)
+		return getEquipName_1xx(ei)
+	:?ei < 300 //大劍 2 (200~299)
+		return getEquipName_2xx(ei)
+	:?ei < 400 //盾 3 (300~399)
+		return getEquipName_3xx(ei)
+	:?ei < 500 //弩 4 (400~499)
+		return getEquipName_4xx(ei)
+	:?ei < 600 //棍 5 (500~599)
+		return getEquipName_5xx(ei)
+	:?ei < 700 //鎚 6 (600~699)
+		return getEquipName_6xx(ei)
+	:?ei < 800 //其他 (700~899)
+		return getEquipName_7xx(ei)
+	:?ei < 900
+		return getEquipName_8xx(ei)
+	:?ei < 1000 //遺物 9 (900~999)
+		return getEquipName_9xx(ei)
+
+//	0	(10~99)
+func getEquipName_0xx(ei)
+	?ei < 20
+		?ei = 11
+			return [
+			"shovel",
+			"shovel"
+			]
+		:?ei = 12
+			return [
+			"moon",
+			"hatchet"
+			]
+		:?ei = 13
+			return [
+			"trisk",
+			"hatchet"
+			]
+	:?ei < 30
+		?ei = 22 //消解小劍+盾
+			return [
+			"aether sword *10 dU -long",
+			"aether shield *10 au"
+			]
+		:?ei = 23 //消解大劍+盾
+			return [
+			"aether long sword *10 dU",
+			"aether shield *10 au"
+			]
+		:?ei = 24 //消解大劍+小劍
+			return [
+			"aether long sword *10 dU",
+			"aether sword *10 dU -long"
+			]
+	:
+		?ei = 90
+			return [
+			"ouroboros",
+			"trisk"
+			]
+		:?ei = 93
+			return [
+			"star",
+			"trisk"
+			]
+
+//短劍	1	(100~199)
+func getEquipName_1xx(ei)
+	?ei < 110 //雙D (101~105)
+		?ei = 101 //D毒劍
+			moonState = 2
+			return [
+			"poison sword *10 D +21 shiny",
+			"poison sword *10 D +21 -shiny"
+			]
+		:?ei = 102 //D心劍
+			moonState = 2
+			return [
+			"vigor sword *10 D +21 shiny",
+			"vigor sword *10 D +21 -shiny"
+			]
+		:?ei = 103 //D乙太劍
+			moonState = 2
+			return [
+			"aether sword *10 D +21 shiny",
+			"aether sword *10 D +21 -shiny"
+			]
+		:?ei = 104 //雙D火劍
+			moonState = 2
+			return [
+			"fire sword *10 D +21 shiny",
+			"fire sword *10 D +21 -shiny"
+			]
+		:?ei = 105 //D冰劍
+			moonState = 2
+			return [
+			"ice sword *10 D +21 shiny",
+			"ice sword *10 D +21 -shiny"
+			]
+		:?ei = 106
+			return [
+			"poison sword *10 dP +21 shiny",
+			"fire sword *10 dF"
+			]
+
+	:?ei <= 150 //毒D (141~145)
+		?ei = 140
+			return [
+			"moon",
+			"poison sword *10 dp +21"
+			]
+		?ei = 141
+			return [
+			"poison sword *10 dp +21",
+			"poison sword *10 D"
+			]
+		:?ei = 142
+			return [
+			"poison sword *10 dp +21",
+			"vigor sword *10 D"
+			]
+		:?ei = 143
+			return [
+			"poison sword *10 dp +21",
+			"aether sword *10 D"
+			]
+		:?ei = 144
+			return [
+			"poison sword *10 dp +21",
+			"fire sword *10 D"
+			]
+		:?ei = 145
+			return [
+			"poison sword *10 dp +21",
+			"ice sword *10 D"
+			]
+		:?ei = 146
+			return [
+			"poison sword *10 dP +21 shiny",
+			"poison sword *10 D"
+			]
+		:?ei = 147
+			return [
+			"poison sword *10 dP +21 shiny",
+			"vigor sword *10 D"
+			]
+		:?ei = 148
+			return [
+			"poison sword *10 dP +21 shiny",
+			"aether sword *10 D"
+			]
+		:?ei = 149
+			return [
+			"poison sword *10 dP +21 shiny",
+			"fire sword *10 D"
+			]
+		:?ei = 150
+			return [
+			"poison sword *10 dP +21 shiny",
+			"ice sword *10 D"
+			]
+
+	:?ei < 160 //心D (151~155)
+		?ei = 151
+			return [
+			"vigor sword *10 dL",
+			"poison sword *10 D"
+			]
+		:?ei = 152
+			return [
+			"vigor sword *10 dL",
+			"vigor sword *10 D +21"
+			]
+		:?ei = 153
+			return [
+			"vigor sword *10 dL",
+			"aether sword *10 D"
+			]
+		:?ei = 154
+			return [
+			"vigor sword *10 dL",
+			"fire sword *10 D"
+			]
+		:?ei = 155
+			return [
+			"vigor sword *10 dL",
+			"ice sword *10 D"
+			]
+
+	:?ei < 170 //火D (161~165)
+		?ei = 160
+			return [
+			"moon",
+			"fire sword *10 dF"
+			]
+		?ei = 161
+			return [
+			"fire sword *10 dF",
+			"poison sword *10 D"
+			]
+		:?ei = 162
+			return [
+			"fire sword *10 dF",
+			"vigor sword *10 D"
+			]
+		:?ei = 163
+			return [
+			"fire sword *10 dF",
+			"aether sword *10 D"
+			]
+		:?ei = 164
+			return [
+			"fire sword *10 dF",
+			"fire sword *10 D"
+			]
+		:?ei = 165
+			return [
+			"fire sword *10 dF",
+			"ice sword *10 D"
+			]
+
+	:?ei < 180 //冰D (171~175)
+		?ei = 171
+			return [
+			"ice sword *10 dI",
+			"poison sword *10 D"
+			]
+		:?ei = 172
+			return [
+			"ice sword *10 dI",
+			"vigor sword *10 D"
+			]
+		:?ei = 173
+			return [
+			"ice sword *10 dI",
+			"aether sword *10 D"
+			]
+		:?ei = 174
+			return [
+			"ice sword *10 dI",
+			"fire sword *10 D"
+			]
+		:?ei = 175
+			return [
+			"ice sword *10 dI",
+			"ice sword *10 D"
+			]
+
+	:?ei < 200
+		?ei = 192 //回復
+			return [
+			"vigor sword *10 dL +21 shiny",
+			"vigor sword *10 dL +21 -shiny"
+			]
+		:?ei = 195 //減速
+			moonState = 2
+			return [
+			"ice sword *10 dI +21 shiny",
+			"ice sword *10 dI +21 -shiny"
+			]
+
+//大劍	2	(200~299)
+func getEquipName_2xx(ei)
+	return ["",""]
+
+//盾	3	(300~399)
+func getEquipName_3xx(ei)
+	?ei < 310
+		?ei = 306 //冲刺盾
+			return [
+			"trisk",
+			"dash"
+			]
+		:?ei = 307 //複合盾-速
+			return [
+			"quest",
+			"compound -shiny"
+			]
+		:?ei = 308 //複合盾-量
+			return [
+			"quest",
+			"compound shiny"
+			]
+
+	:?ei < 320
+		?ei = 311 //ap盾
+			return [
+			"vigor sword *10 dL",
+			"poison shield *10 ap"
+			]
+		:?ei = 312 //ah盾
+			return [
+			"vigor sword *10 dL",
+			"vigor shield *10 ah"
+			]
+		:?ei = 313 //au盾
+			return [
+			"vigor sword *10 dL",
+			"aether shield *10 au"
+			]
+	:?ei < 370
+		?ei = 361 //A毒盾
+			return [
+			"poison hammer *10 A",
+			"poison shield *10 A"
+			]
+		:?ei = 362 //A心盾
+			return [
+			"vigor hammer *10 A",
+			"vigor shield *10 A"
+			]
+		:?ei = 363 //A乙太盾
+			return [
+			"aether hammer *10 A",
+			"aether shield *10 A"
+			]
+		:?ei = 364 //A火盾
+			return [
+			"fire hammer *10 A",
+			"fire shield *10 A"
+			]
+		:?ei = 365 //A冰盾
+			return [
+			"ice hammer *10 A",
+			"ice shield *10 A"
+			]
+
+//弩	4	(400~499)
+func getEquipName_4xx(ei)
+	?ei = 411 //D毒弩
+		return [
+		"poison crossbow D",
+		"poison crossbow D"
+		]
+	?ei = 412 //D心弩
+		return [
+		"vigor crossbow D",
+		"vigor crossbow D"
+		]
+	?ei = 413 //D乙太弩
+		return [
+		"aether crossbow D",
+		"aether crossbow D"
+		]
+	?ei = 414 //D火弩
+		return [
+		"fire crossbow D",
+		"fire crossbow D"
+		]
+	?ei = 415 //D冰弩
+		return [
+		"ice crossbow D",
+		"ice crossbow D"
+		]
+	:?ei = 430 //連射弩
+		return [
+		"repeating_crossbow",
+		"repeating_crossbow"
+		]
+
+//棍	5	(500~599)
+func getEquipName_5xx(ei)
+	?ei = 500 //木棍
+		return [
+		"quarterstaff",
+		"quarterstaff"
+		]
+	:?ei = 502 //D心棍
+		return [
+		"vigor staff *10 D",
+		"vigor staff *10 D"
+		]
+	:?ei = 512 //dL心棍
+		return [
+		"vigor staff *10 dL",
+		"vigor staff *10 dL"
+		]
+	:?ei = 513 //dU乙太棍
+		return [
+		"aether staff *10 dU",
+		"aether staff *10 dU"
+		]
+	:?ei = 515 //dI冰棍
+		return [
+		"ice staff *10 dI",
+		"ice staff *10 dI"
+		]
+
+//鎚	6	(600~699)
+func getEquipName_6xx(ei)
+	?ei = 601 //雙D毒鎚
+		return [
+		"poison hammer *10 D +20",
+		"poison hammer *10 D +21"
+		]
+	:?ei = 603 //雙D乙太鎚
+		return [
+		"aether hammer *10 D +20",
+		"aether hammer *10 D +21"
+		]
+	:?ei = 604 //雙D火鎚
+		return [
+		"fire hammer *10 D +20",
+		"fire hammer *10 D +21"
+		]
+	:?ei = 606 //重錘
+		return [
+		"heavy hammer",
+		"heavy hammer"
+		]
+
+//其他	7	(700~899)
+func getEquipName_7xx(ei)
+	?ei = 700 //月牙-攻速
+		return [
+		"bardiche -shiny",
+		"bardiche -shiny"
+		]
+	?ei = 701 //月牙-暴擊
+		return [
+		"bardiche shiny",
+		"bardiche shiny"
+		]
+
+//功能	8	(700~899)
+func getEquipName_8xx(ei)
+	?ei = 863 //加速+搜集
+		return [
+		"trisk",
+		"star"
+		]
+	:?ei = 864 //加速+回血
+		return [
+		"trisk",
+		"ouroboros"
+		]
+	:?ei = 865 //加速+回盾-速
+		return [
+		"trisk",
+		"compound -shiny"
+		]
+	:?ei = 866 //加速+回盾-量
+		return [
+		"trisk",
+		"compound shiny"
+		]
+	:?ei = 869 //
+		return [
+		"trisk",
+		"sword"
+		]
+	:?ei = 870 //
+		return [
+		"hook",
+		"compound shiny"
+		]
+
+//遺物	9	(900~999)
+func getEquipName_9xx(ei)
+	?ei = 901 //打擊盾
+		return [
+		"trisk",
+		"bash"
+		]
+	:?ei = 902 //墮神之劍
+		return [
+		"blade",
+		"blade"
+		]
+	:?ei = 903 //骷髏手
+		return [
+		"skeleton_arm",
+		"skeleton_arm"
+		]
+	:?ei = 911 //面具
+		return [
+		"star",
+		"mask"
+		]
+	:?ei = 912 //面具
+		return [
+		"trisk",
+		"mask"
+		]
+	:?ei = 913 //面具
+		return [
+		"quest",
+		"mask"
+		]
+
+
+
+func determineChangeEquip()
+	?Data.skillAction
+		return false
+
+	?cancelBackswing() //取消後搖
+		?moonState
+			moonIndex = (moonIndex + 1) % (moonState + 1)
+		:
+			moonIndex = 0
+		return true
+	?moonIndex = moonState & moonState
+		moonIndex = 0
+		return true
+
+	?ai.idle | ai.walking
+		return true
+
+	?Data.currentEquip = 0 //跑圖石 (癈棄)
+		return true
+	?Data.currentEquip - Data.currentEquip % 10 = 900 //遺物
+		return true
+	?Data.currentEquip - Data.currentEquip % 10 = 860 //功能性道具
+		return true
+	?Data.currentEquip - Data.currentEquip % 100 = 300 //盾
+		return true
+	return false
+
+//  取消後搖  //
+
+func cancelBackswingL()
+	?item.left.state = 3
+		equipL sword lv1
+		Data.aacL++
+		return true
+	return false
+
+func cancelBackswingR()
+	?item.right.state = 3
+		equipR shield lv1
+		Data.aacR++
+		return true
+	return false
+
+func cancelBackswing()
+	var switch = cancelBackswingL()
+	return cancelBackswingR() | switch

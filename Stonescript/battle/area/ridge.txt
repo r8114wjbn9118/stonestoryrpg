@@ -1,0 +1,53 @@
+var Data = import battle/data
+var Skill = import battle/skill
+var Buff = import battle/buff/main
+
+func init()
+	return
+
+func action()
+	return false
+
+func run()
+	return
+
+func attack()
+	return
+
+func bossFight_0()
+	?foe.distance <= 5
+		Data.ei = 700
+		?Data.bossAttackLoop = 6
+			Skill.useQuarterstaffSkill()
+	:
+		Skill.useDashSkill()
+		?foe.distance > 15
+			Skill.useQuarterstaffSkill()
+
+	?foeInjury
+		Data.bossAttackLoop = (Data.bossAttackLoop + 1) % 7
+
+	?foe.armor <= 0 & foe.state < 100
+		Skill.useBardicheSkill()
+
+func bossFight_1()
+	?foe.armor <= 0 & item.potion = "lucky" & foe.state = 1 & foe.time > 90
+		activate potion
+		return
+
+	Data.ei = 700
+	?foe.count = 1
+		?foe.distance <= 5
+			?foe.armor > 0
+				Data.ei = 604
+			:?Buff.needIce()
+				Data.ei = 174
+			:
+				Data.ei = 104
+		:?foe.state = 133 | foe.state = 143
+			?playerBuffs.smiteCount
+				Data.ei = 515
+			:
+				Data.ei = 7
+		:
+			Skill.useDashSkill()

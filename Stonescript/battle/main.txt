@@ -1,0 +1,95 @@
+var Data = import battle/data
+var Weapon = new battle/weapon
+var State = new battle/state
+var Buff = new battle/buff/main
+var Skill = new battle/skill
+
+var Area
+?!Area
+	?loc = fall
+		Area = new battle/area/fall
+	:?loc = rocky
+		?loc.stars = 5
+			Area = new battle/area/rocky/5
+		:?loc.stars = 15
+			Area = new battle/area/rocky/15
+		:
+			Area = new battle/area/rocky
+	:?loc = deadwood
+		?loc.stars = 5
+			Area = new battle/area/deadwood/5
+		:
+			Area = new battle/area/deadwood
+	:?loc = caves
+		Area = new battle/area/caves
+	:?loc = mushroom
+		Area = new battle/area/mushroom
+	:?loc = halls
+		Area = new battle/area/halls
+	:?loc = mine
+		Area = new battle/area/mine
+	:?loc = ridge
+		Area = new battle/area/ridge
+	:?loc = temple
+		Area = new battle/area/temple
+	:
+		Area = new battle/area/null
+
+?loc.loop
+	Data.func_state = "loop "
+	State.reset()
+	Skill.reset()
+
+// main //
+func main()
+	State.injury()
+	Buff.update()
+
+	State.bossFightStart()
+
+	action()
+
+	Weapon.change()
+
+	State.update()
+	Skill.update()
+
+	Data.show()
+
+func action()
+	/*
+	?loc.begin
+		Area.begin()
+		return
+	*/
+	?time <= 1
+		Area.init()
+		return
+
+	?Area.action()
+		return
+
+	?foe.distance <= 25
+		?Data.bossFight
+			?Data.bossFight = 1
+				Data.func_state = "boss_1"
+				Area.bossFight_1()
+			:?Data.bossFight = 2
+				Data.func_state = "boss_2"
+				Area.bossFight_2()
+			:?Data.bossFight = 3
+				Data.func_state = "boss_3"
+				Area.bossFight_3()
+			:?Data.bossFight = -1
+				Data.func_state = "boss_0"
+				Area.bossFight_0()
+			:
+				Area.bossFight()
+		:
+			Data.func_state = "attack"
+			Area.attack()
+	:
+		Data.func_state = "run   "
+		Area.run()
+
+main()

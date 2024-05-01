@@ -1,0 +1,50 @@
+var Data = import battle/data
+var Skill = import battle/skill
+var Buff = import battle/buff/main
+
+func init()
+	return
+
+func action()
+	return false
+
+func run()
+	return
+
+func attack()
+	return
+
+func bossFight_0()
+	?foe.distance <= 6
+		Skill.useMindStoneSkill()
+	?item.GetCooldown("mind") > 0
+		Data.ei = 515
+	:
+		Skill.useDashSkill()
+
+func bossFight_1()
+	//time:
+	?foe.state = 32 & foe.time > 20
+		?foe.distance < 23
+			Skill.useMindStoneSkill()
+		Data.bossAction = 1
+	//:?distance < foe.distance & distance <= 10
+	:?foe.state = 33 & foe.time >= 194
+		Data.bossAction = 0
+	:?item.potion = "lucky" & foe.state = 2
+		activate potion
+
+	?Data.bossAction = 0
+		Data.ei = 413
+	:?foe.distance <= 18
+		?foe.distance <= 10
+			?foe.armor > 0
+				Data.ei = 603
+				Skill.useHeavyHammerSkill()
+			:
+				Data.ei = 103
+				Skill.useBardicheSkill()
+		:
+			Skill.useDashSkill()
+	:
+		Skill.useDashSkill()

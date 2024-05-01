@@ -1,0 +1,62 @@
+var Data = import battle/data
+
+// buff更新(processBuffString) //
+func update()
+	Data.playerBuffs.playerBuffs()
+	Data.playerDeBuffs.playerDeBuffs()
+
+	?foe.count
+		Data.foeBuffs.foeBuffs()
+		Data.foeDeBuffs.foeDeBuffs()
+
+		/*
+		?foeDeBuffs.iceCount
+			minFoeIceTimer = 180
+			for i = 0..5
+				cache = foeIceTimerList[i]
+				>`0,@i@,@i@ @cache@
+				?cache > 0
+					foeIceTimerList.Emplace(i, cache - 1)
+				?minFoeIceTimer > cache
+					minFoeIceTimer = cache
+			?foeIceCount < foeDeBuffs.iceCount | foeIceTimer < foeDeBuffs.iceTimer
+				foeIceTimerList.Emplace(foeIceTimerListIndex, 180)
+				foeIceTimerListIndex = (foeIceTimerListIndex + 1) % 6
+				loc.pause()
+			foeIceCount = foeDeBuffs.iceCount
+			foeIceTimer = foeDeBuffs.iceTimer
+		:
+			foeIceCount = 0
+			foeIceTimer = 0
+			minFoeIceTimer = 0
+			foeIceTimerListIndex = 0
+			for i = 0..5
+				foeIceTimerList.Emplace(i,0)
+		*/
+
+
+
+// debuff檢測 //
+
+//毒
+func needPoison()
+	return Data.foeDeBuffs.poisonTimer <= (20 * (1 + Data.playerDeBuffs.iceCount / 12))
+	return false
+
+//火
+func needFire()
+	return Data.foeDeBuffs.fireTimer <= (20 * (1 + Data.playerDeBuffs.iceCount / 12))
+
+//冰
+func needIce()
+	return Data.foeDeBuffs.iceCount < 6 | Data.foeDeBuffs.iceTimer <= (25 * (1 + Data.playerDeBuffs.iceCount / 12))
+
+func iceEffect()
+	return Data.foeDeBuffs.iceCount * 20 / 3
+
+//預設全debuff檢測
+func needAddFoeState()
+	?foe = immune_to_debuff_damage | Data.foeBuffs.vigorTimer
+		return false
+
+	return needPoison() | needFire() | needIce()

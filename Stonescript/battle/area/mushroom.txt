@@ -1,0 +1,77 @@
+var Data = import battle/data
+var Skill = import battle/skill
+var Buff = import battle/buff/main
+
+func init()
+	return
+
+func action()
+	return false
+
+func run()
+	return
+
+func attack()
+	return
+
+func bossFight_0()
+	?foe = fluff
+		?foe.distance <= 6
+			equipL quest
+			equipR mind
+			Skill.useMindStoneSkill()
+		?item.GetCooldown("mind") > 0
+			Data.ei = 515
+		:
+			Skill.useDashSkill()
+	:
+		Skill.useBardicheSkill()
+		?foe.distance <= 20
+			Data.ei = 700
+
+func bossFight_1()
+	?item.potion = "lucky" //& foe.state = 1 & foe.time > 70
+		activate potion
+		return
+
+	>@Data.bossAttackLoop@
+	?Data.bossAttackLoop ! 0 //| !Buff.needAddFoeState()
+		?Buff.needIce()
+			Data.ei = 195
+		:?foe.armor
+			Data.ei = 601
+		:
+			Data.ei = 101
+
+	?foe.state = 32 & foe.time = 0
+		Data.bossAttackLoop = (Data.bossAttackLoop + 1) % 6
+
+	//time = 49
+	?Data.bossAttackLoop = 0 & foe.state = 32 & foe.time = 48 + Buff.iceEffect()
+		Skill.useMindStoneSkill()
+
+	Skill.useDashSkill()
+
+func bossFight_2()
+	//?timer = 30 | timer >= 120 & timer % 18 = 0
+	//	equip poison shield *10 ap
+	//	Data.ei = -3
+	//	currentEquip = 311
+	//	t = 0
+
+	?foe.count = 2
+		?Buff.needPoison()
+			Data.ei = 141
+		:
+			Data.ei = 101
+
+		//time = 29(近)
+		?foe.state = 32 & foe.time = 28 + SticeEffect()
+			Skill.useMindStoneSkill()
+	:
+		?Buff.needPoison()
+			Data.ei = 141
+		:
+			Data.ei = 101
+
+	Skill.useDashSkill()

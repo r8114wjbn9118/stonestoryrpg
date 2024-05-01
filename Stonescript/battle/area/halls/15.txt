@@ -1,0 +1,90 @@
+var Data = import battle/data
+var Skill = import battle/skill
+var Buff = import battle/buff/main
+
+func init()
+    //brew
+	
+	return
+
+func action()
+	return false
+
+func run()
+	return
+
+func attack()
+	return
+
+func bossFight_0()
+	?draw.getsymbol(screen.w / 2 + 19, screen.h / 2 + 4) = "\"
+		Data.bossAction = 1
+	//?pos.x < 470 & foe.distance > 20
+	?Data.bossAction = 0
+		Data.ei = 412
+	:?Data.playerState ! 0
+		Data.ei = 512
+	:?Data.playerBuffs.smiteCount
+		Data.ei = 515
+	:
+		Data.ei = 502
+
+	Skill.useDashSkill()
+	
+func bossFight_1()
+	//time = 69
+	//?foe.state = 32 & foe.time > 55
+	//	Data.ei = 4
+	?foe.state = 32 & foe.time > 66
+		Data.ei = 22
+
+	:?Data.playerBuffs.smiteCount > 5 & Buff.needAddFoeState()
+		?Buff.needPoison() & Buff.needFire()
+			Data.ei = 106
+		:?Buff.needPoison()
+			Data.ei = 147
+		:?Buff.needFire()
+			Data.ei = 162
+		:?Buff.needIce()
+			Data.ei = 195
+	:?Data.playerState ! 0
+		Data.ei = 152
+	:
+		Data.ei = 102
+
+	Skill.useDashSkill()
+	
+	Skill.useBardicheSkill()
+
+func bossFight_2()
+	?foe.state = 33 & foe.time <= 10
+		?Buff.needIce()
+			Data.ei = 515
+		:
+			Data.ei = 412
+	:
+		?foe.count > 1
+			?playerBuffs.smiteCount > 5
+				Data.ei = 515
+			:
+				Data.ei = 700
+		:?Buff.needIce()
+			Data.ei = 195
+		:?Data.playerBuffs.smiteCount > 5 & Buff.needAddFoeState()
+			?Buff.needPoison() & Buff.needFire()
+				Data.ei = 106
+			:?Buff.needPoison()
+				Data.ei = 147
+			:?Buff.needFire()
+				Data.ei = 162
+		:
+			Data.ei = 102
+
+		Skill.useDashSkill()
+
+	?foe = boss & foe.state = 32 & foe.time = 18 + Buff.iceEffect()
+		Skill.useMindStoneSkill()
+	:?item.potion = "lucky"
+		activate potion
+	?foe = boss
+		Skill.useBardicheSkill()

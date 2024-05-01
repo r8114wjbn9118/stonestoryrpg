@@ -1,0 +1,53 @@
+var Data = import battle/data
+var Skill = import battle/skill
+var Buff = import battle/buff/main
+
+func init()
+	return
+
+func action()
+	return false
+
+func run()
+	return
+
+func attack()
+	return
+
+func bossFight_0()
+	?foe.distance <= 10
+		Data.ei = 700
+	:
+		Skill.useDashSkill()
+
+func bossFight_1()
+	?bossAction = 1
+		?foe.distance > 10
+			Data.ei = 515
+		:
+			Data.ei = 700
+	:
+		?foe.distance <= 10
+			?!Buff.needAddFoeState()
+				?debuffs.count < 10 & playerState > 2
+					Data.ei = 3
+				:
+					Data.ei = 700
+			Skill.useBardicheSkill()
+		:
+			Skill.useDashSkill()
+
+
+	?(foe.state = 31 | foe.state = 33) & foe.time = 0
+		timer = 0
+
+	?foe.distance <= 5
+		symbol = draw.getsymbol(screen.w / 2 + 6, screen.h / 2 - 7)
+	:
+		symbol = draw.getsymbol(screen.w / 2 + 4, screen.h / 2 - 7)
+	?symbol = "("
+		//?bossAction = 1
+		//	bossAction = 0
+		?item.GetCooldown("mind") <= 0
+			Skill.useMindStoneSkill()
+			bossAction = 1

@@ -1,0 +1,118 @@
+var Data = import battle/data
+var Skill = import battle/skill
+var Buff = import battle/buff/main
+
+func init()
+	return
+
+func action()
+	return false
+
+func run()
+	?Skill.useQuarterstaffSkill()
+		return
+	:?Skill.useFireTalismanSkill()
+		return
+
+	:?pickup.distance <= 5
+		Data.ei = 863
+	:?foe.distance >= 25
+		?hp = maxhp
+			?armor >= 16
+				Data.ei = 866
+			:
+				Data.ei = 865
+		:
+			Data.ei = 864
+
+func attack()
+	?foe.distance < 25 //進入攻擊範圍
+		?Skill.useArmSkill()
+			return
+
+		?((foe.count >= 5 + (loc.stars - 1) % 5 & screen.i >= 3) & loc ! mushroom) | Data.BladeSkillPrepare > totaltime
+			?Skill.useBladeSkill()
+				return
+
+		?loc = mine & (armor < 35 | playerBuffs.smiteCount < 5)
+			?Skill.useDashSkill()
+				return
+			?foe.GetCount(10) = 1
+				Data.ei = 22
+			:
+				Data.ei = 23
+			return
+
+		?foe.distance <= 11 //近程範圍
+
+			//?foeState >= 20 | foe.count > 5 | foe = unpushable | foe = immune_to_ranged
+			?Data.playerBuffs.smiteCount > 5 & Buff.needIce() & foe ! immune_to_ranged
+				Data.ei = 515
+			:?foe = immune_to_physical //免疫物理(幽靈) 
+				?playerBuffs.smiteCount
+					Data.ei = 515
+				:
+					Data.ei = 502
+			:
+				Data.ei = 700
+			?foe = pillar
+				?foe.GetCount(10) = 1 & armor >= maxarmor
+					Data.ei = 24
+				:
+					Data.ei = 22
+			?foe.count = 1 & foe.distance > 5
+				Skill.useQuarterstaffSkill()
+			:?foe.GetCount(10) = 1
+				?loc = mushroom
+					Data.ei = 101
+				:?loc = mine
+					Data.ei = 103
+			?(foe.state = 32 | foe.state = 33) & (foe = mosquito | foe = slave_master)
+				Data.ei = 22
+		:
+			?foe.distance > 12 //& foe.count > 5 //& hp < maxhp - 10
+				?foe = fire
+					?armor < 60
+						Data.ei = 22
+				:?armor < 30
+					?foe = poison
+						Data.ei = 365
+					:?foe = vigor
+						Data.ei = 361
+					:?foe = aether
+						Data.ei = 362
+					:?foe = ice
+						Data.ei = 364
+			?Data.ei - Data.ei % 10 ! 360
+				Skill.useDashSkill()
+
+func bossFight_Universal()
+	?foe.distance <= 10
+		//?Buff.needPoison()
+		//	Data.ei = 1
+		?Buff.needIce() | Data.playerState ! 0
+			Data.ei = 515
+		:
+			Data.ei = 105
+		Skill.useBardicheSkill()
+	:
+		Skill.useDashSkill()
+
+func bossFight_0()
+	bossFight_Universal()
+	?foe.state = 33 & foe.time >= 28
+		Skill.useMindStoneSkill()
+
+func bossFight_1()
+	bossFight_Universal()
+	?item.GetCooldown("mind") > 60
+		?Buff.needIce()
+			Data.ei = 515
+		:
+			Data.ei = 415
+		//?foe.distance >= 15
+		//Skill.useQuarterstaffSkill()
+
+	//time = 21(近)
+	?foe.state = 142 & foe.time >= 19 + Buff.iceEffect()
+		Skill.useMindStoneSkill()

@@ -1,0 +1,95 @@
+//equip
+var ei = -1
+var currentEquip = -1
+
+var aacL = 0
+var aacR = 0
+
+var moon = 1
+
+//state
+
+//	state => boss
+var bossFight = 0 //boss形態
+var bossAction = 0
+var bossAttackLoop = -1
+var bossDissolve = true
+
+//	state => 比較用
+var playerHp = 80
+var playerArmor = 0
+var playerState = 0
+var playerInjury = false
+
+var foeMaxHp = 0
+var foeHp = 0
+var foeMaxArmor = 0
+var foeArmor = 0
+var foeState = 0
+var foeInjury = false
+var damage = 0
+
+var distance = 0
+
+//buff
+//	buff => player
+var playerDebuffsCount = 0
+var playerBuffs = new battle/buff/processBuffString
+var playerDeBuffs = new battle/buff/processBuffString
+
+//	buff => foe
+var foeDebuffsCount = 0
+var foeBuffs = new battle/buff/processBuffString
+var foeDeBuffs = new battle/buff/processBuffString
+
+//skill
+var bladeSkillPrepare = 0
+
+var fissureStoneSkillCD = 0
+
+//	skill => 技能前搖
+var skillAction = 0
+
+//test
+var func_state = "begin"
+var a = 0
+var b = 0
+var c = 0
+var d = 0
+var t = 0
+
+func show()
+	?loc.loop
+		a = 0
+		b = 0
+		c = 0
+		d = 0
+		t = 0
+	showData()
+
+func showData()
+	>`0,6,
+	^\n
+	^@a@ @b@ @c@ @d@ @summon.count@ px:@pos.x@ si:@screen.i@ sx:@screen.x@\n
+	^ai:e@ai.enabled@ p@ai.paused@ i@ai.idle@ w@ai.walking@\n
+	^state:@playerInjury@ @foeInjury@ ps @playerState@ fs @foeState@\n
+	^@func_state@ @foe.state@ @foe.time@ @time@\n
+	^boss   Ac@bossAction@ Al@bossAttackLoop@ @bossDissolve@\n
+	//^buffs:@buffs.string@ @debuffs.string@\n
+	//^foebuffs:
+	//^∞@foeDeBuffs.poisonTimer@ φ@foeDeBuffs.fireTimer@ @foeDeBuffs.iceCount@❄@foeDeBuffs.iceTimer@
+	//^@foe.buffs.string@\n
+
+	>`0,17,
+	^@item.potion@ @buffs.string = "smite"@\n
+	^skill:@skillAction@ @item.CanActivate()@ d:@item.GetCooldown("dash")@ b:@item.GetCooldown("bash")@ q:@item.GetCooldown("quarterstaff")@\n
+	^m:@item.GetCooldown("mind")@ b:@item.GetCooldown("bardiche")@ h:@item.GetCooldown("hammer")@ B:@item.GetCooldown("blade")@ A:@item.GetCooldown("skeleton_arm")@ M:@item.GetCooldown("mask")@ ft:@item.GetCooldown("fire_talisman")@ at:@item.GetCooldown("aether_talisman")@\n
+	^equip:@currentEquip@ @ei@ 
+	^count:@foe.count@ @foe.GetCount(10)@ @foe.GetCount(69)@ distance:@foe.distance@ @damage@\n
+	^s:@item.left.state@ t:@item.left.time@ a:@aacL@ 
+	^@item.left@\n
+	^s:@item.right.state@ t:@item.right.time@ a:@aacR@ 
+	^@item.right@\n
+	^@buffs.string@ @debuffs.string@\n
+	^@foe.buffs.string@ @foe.debuffs.string@ 
+	^@foe@

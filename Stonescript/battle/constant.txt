@@ -1,0 +1,4 @@
+//武器傷害
+var BardichePower = 52
+var BardicheCritical = 13
+var BladeSkillPower = 210 //145

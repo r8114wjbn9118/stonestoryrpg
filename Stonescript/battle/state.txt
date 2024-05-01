@@ -1,0 +1,90 @@
+var CONSTANT = import battle/constant
+var Data = import battle/data
+
+func reset()
+	Data.bossFight = 0
+	Data.bossAction = 0
+	Data.bossAttackLoop = -1
+
+func update()
+	Data.playerHp = hp
+	Data.playerDebuffsCount = debuffs.count
+
+	Data.foeMaxHp = foe.maxhp
+	Data.foeHp = foe.hp
+	Data.foeMaxArmor = foe.maxarmor
+	Data.foeArmor = foe.armor
+	Data.distance = foe.distance
+	Data.foeDebuffsCount = foe.debuffs.count
+
+
+
+// 受擊判定 / 狀態更新 //
+func injury()
+	//player
+	Data.playerInjury = Data.playerHp > hp | Data.playerArmor > armor + 2
+	?hp = maxhp
+		Data.playerState = 0 //滿血
+	:
+		?armor > 0
+			Data.playerState = 1 //有甲
+		?hp > maxhp / 2 // * 3 / 4
+			Data.playerState = 2 //無甲
+		:?hp > 5 + loc.stars - loc.stars % 5
+			Data.playerState = 3 //半血以下
+		:
+			Data.playerState = 4 //危險線
+
+
+	//foe
+	Data.foeInjury = (Data.foeHp > foe.hp + (Data.foeMaxHp - foe.maxhp) + 5 | Data.foeArmor > foe.armor + 5) & foe ! wasp
+	?Data.foeInjury
+		Data.damage = Data.foeHp - foe.hp + Data.foeArmor - foe.armor
+	:
+		Data.damage = 0
+
+	?foe.hp = foe.maxhp & foe.armor = foe.maxarmor
+		Data.foeState = 0 //全滿
+	:?foe.armor > 0
+		Data.foeState = 1 //有甲
+	:
+		Data.foeState = 2 //無甲
+	?foe.hp + foe.armor <= CONSTANT.BardichePower * CONSTANT.BardicheCritical
+		?foe.hp + foe.armor <= CONSTANT.BardichePower
+			Data.foeState = Data.foeState + 20 //月牙秒殺線
+		:
+			Data.foeState = Data.foeState + 10 //危險線
+
+
+
+// boss戰開始檢測 //
+func bossFightStart()
+	?foe = boss
+		?foe = phase1
+			?Data.bossFight ! 1
+				bossInitialize(1)
+		:?foe = phase2
+			?Data.bossFight ! 2
+				bossInitialize(2)
+		:?foe = phase3
+			?Data.bossFight ! 3
+				bossInitialize(3)
+
+	//出埸動畫檢測
+	?Data.bossFight
+		?ai.enabled
+			?Data.bossAction = -1
+				Data.bossAction = 0
+		:?foe.hp <= 0 | Data.foeState % 10 = 0
+			Data.bossAction = -1
+
+
+	//小boss
+	:?foe = boss | foe = wasp | (loc = halls & pos.x >= 460)
+		bossInitialize(-1)
+
+func bossInitialize(n)
+	Data.bossFight = n
+	Data.bossAction = -1
+	Data.bossAttackLoop = -1
+	Data.bossDissolve = true

@@ -1,0 +1,230 @@
+var Data = import battle/data
+
+/*
+//技能冷卻時間
+var MindStoneSkillCooldown			= 360
+var FissureStoneSkillCooldown		= 540
+var QuarterstaffSkillCooldown		= 150
+var BardicheSkillCooldown			= 900
+var bladeSkillCooldown				= 2400
+*/
+//技能前搖時間(無buff)
+var MindStoneSkillActionDuration		= 2
+var QuarterstaffSkillActionDuration		= 1
+var BardicheSkillActionDuration			= 23
+var BladeSkillActionDuration			= 1
+var TalismanSkillActionDuration			= 20
+var HeavyHammerSkillActionDuration		= 14
+
+var bladeSkillPrepare
+var skillAction
+
+func reset()
+	Data.bladeSkillPrepare = 0
+	Data.skillAction = 0
+
+func update()
+	?Data.skillAction
+		Data.skillAction--
+	//?fissureStoneSkillCD
+	//	fissureStoneSkillCD--
+
+func canActivate()
+	return !Data.skillAction & item.CanActivate()
+
+
+
+func starPickup()
+	?pickup.distance <= 5
+		Data.ei = 863
+		return true
+	return false
+
+func restoreArmor() //quest
+	?armor >= 16
+		Data.ei = 308
+	:
+		Data.ei = 307
+
+func restoreArmor_run()
+	?armor >= 16
+		Data.ei = 866
+	:
+		Data.ei = 865
+
+
+func gathering()
+	?harvest.distance < 5
+		?harvest = boulder //巨石
+			equip shovel
+			Data.ei = 11
+		:?harvest = tree //樹
+			equipL moon
+			equipR hatchet
+			Data.ei = 12
+			?item.right.state = 1
+				activate R
+		return true
+	return false
+
+
+//Dash
+func useDashSkill()
+	?foe.distance > 10
+		?foe.distance <= 16
+			?item.GetCooldown("dash") <= 0
+				Data.ei = 306
+				return true
+			:?item.GetCooldown("bash") <= 0
+				Data.ei = 901
+				return true
+	?useQuarterstaffSkill()
+		return true
+	return false
+
+//Mind Stone
+func useMindStoneSkill()
+	?item.GetCooldown("mind") <= 0// & item.canactivate()
+		equipL quest
+		equipR mind
+		Data.skillAction = MindStoneSkillActionDuration
+		return true
+	return false
+
+/*
+//Fissure Stone
+func useFissureStoneSkill()
+	?fissureStoneSkillCD <= 0 & item.canactivate()
+		equipL quest
+		equipR fissure
+		fissureStoneSkillCD = FissureStoneSkillCooldown
+		return true
+	return false
+*/
+
+//Quarterstaff
+func useQuarterstaffSkill()
+	?item.GetCooldown("quarterstaff") <= 0 & canActivate()
+		equip quarterstaff
+		activate R
+		Data.skillAction = QuarterstaffSkillActionDuration
+		return true
+	return false
+
+//Bardiche
+func useBardicheSkill() //crit
+	?foe.distance <= 10 & item.GetCooldown("bardiche") <= 0 & //foeState - foeState % 10 = 0
+	^canActivate()
+		equip bardiche shiny
+		activate R
+		Data.skillAction = BardicheSkillActionDuration
+		return true
+	return false
+
+func useBardicheSkill_speed()
+	?foe.distance <= 10 & item.GetCooldown("bardiche") <= 0 & //foeState - foeState % 10 = 0
+	^canActivate()
+		equip bardiche -shiny
+		activate R
+		Data.skillAction = BardicheSkillActionDuration
+		return true
+	return false
+
+//Blade
+func useBladeSkill()
+	?item.GetCooldown("blade") <= 0 & item.canactivate()
+		equip blade
+		activate R
+		Data.skillAction = BladeSkillActionDuration
+		screen.ResetOffset()
+		return true
+	return false
+
+func BladeSkill_screenMove()
+	?item.GetCooldown("blade") <= 0 & item.canactivate()
+		screen.Next()
+		Data.bladeSkillPrepare = totaltime + 23
+		return true
+	return false
+
+func useArmSkill()
+	?buffs.string = "pick_pocket" & foe.distance < 10 & 
+	^item.GetCooldown("skeleton_arm") <= 0 & item.CanActivate()
+		equip skeleton_arm
+		activate R
+		return true
+	return false
+
+func useMaskSkill()
+	?item.GetCooldown("mask") <= 0 & item.CanActivate() //& foe.hp > 60 & foe.distance <= 10
+		equipR mask
+		activate R
+		return true
+	return false
+
+func useHeavyHammerSkill() //buff
+	?item.GetCooldown("hammer") <= 0 & item.CanActivate()
+		equip heavy hammer gold
+		activate R
+		Data.skillAction = HeavyHammerSkillActionDuration
+		return true
+	return false
+
+func useHeavyHammerSkill_power()
+	?item.GetCooldown("hammer") <= 0 & item.CanActivate()
+		equip heavy hammer -gold
+		activate R
+		Data.skillAction = HeavyHammerSkillActionDuration
+		return true
+	return false
+
+func useFireTalismanSkill() //L
+	?summon.GetId() ! "cinderwisp" & item.GetCooldown("fire_talisman") <= 0 & canActivate()
+		equipL fire_talisman
+		equipR trisk
+		activate L
+		Data.skillAction = TalismanSkillActionDuration
+		return true
+	return false
+
+func useFireTalismanSkill_R()
+	?summon.GetId() ! "cinderwisp" & item.GetCooldown("fire_talisman") <= 0 & canActivate()
+		equipL trisk
+		equipR fire_talisman
+		activate R
+		Data.skillAction = TalismanSkillActionDuration
+		return true
+	return false
+
+func useCinderwispSkill()
+	//^foe.hp + foe.armor > 2000 & foe.hp + foe.armor < 2500 & 
+	?summon.GetVar("ignition") & 
+	^summon.GetId() = "cinderwisp" & item.GetCooldown("cinderwisp") <= 0
+		activate cinderwisp
+		return true
+	return false
+
+func useAetherTalismanSkill() //L
+	?summon.GetId() ! "voidweaver" & item.GetCooldown("aether_talisman") <= 0 & canActivate()
+		equipL aether_talisman
+		equipR trisk
+		activate L
+		Data.skillAction = TalismanSkillActionDuration
+		return true
+	return false
+
+func useAetherTalismanSkill_R()
+	?summon.GetId() ! "voidweaver" & item.GetCooldown("aether_talisman") <= 0 & canActivate()
+		equipL trisk
+		equipR aether_talisman
+		activate R
+		Data.skillAction = TalismanSkillActionDuration
+		return true
+	return false
+
+func useVoidweaverSkill()
+	?summon.GetId() = "voidweaver" & item.GetCooldown("voidweaver") <= 0
+		activate cinderwisp
+		return true
+	return false
+

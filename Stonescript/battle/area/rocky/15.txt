@@ -1,0 +1,194 @@
+var Data = import battle/data
+var Skill = import battle/skill
+var Buff = import battle/buff/main
+
+func init()
+	brew stone + bronze
+	return
+
+func action()
+	?summon.GetVar("ignition") = 10
+		Skill.useCinderwispSkill()
+
+	?item.GetCooldown("mask") <= 0
+		?screen.x >= 69 + 50
+			?Skill.useMaskSkill()
+				screen.ResetOffset()
+				return true
+		?screen.i = 1 //& pos.x % 69 = 45
+			screen.Next()
+
+	?pos.x = 120
+		?Skill.useQuarterstaffSkill()
+			return true
+
+	?Data.bossAction = -1
+		Skill.restoreArmor()
+		return true
+	:
+		Skill.restoreArmor_run()
+
+	return false
+
+func run()
+	//?false & gathering()
+	//	return 
+
+	?screen.i ! 2 & Skill.useQuarterstaffSkill()
+		return
+	?Skill.useFireTalismanSkill()
+		equipR trisk
+		return
+	?Skill.starPickup()
+		return
+
+	?hp = maxhp
+		Skill.restoreArmor_run()
+	:
+		Data.ei = 864
+
+func attack()
+	return
+
+func bossFight_0()
+	?Skill.useMaskSkill()
+		return
+
+	?foe.distance <= 10
+		?Data.bossAction = 0
+			?Buff.needIce()
+				Data.ei = 195
+			:
+				Skill.useBardicheSkill()
+				Data.bossAction = 1
+		:
+			Data.ei = 700
+	:
+		Skill.useDashSkill()
+
+func bossFight_1()
+	?foe.distance <= 10
+		//?Buff.needPoison() & Buff.needFire()
+		//	Data.ei = 106
+		?Buff.needIce()
+			Data.ei = 195
+		//:?Buff.needPoison()
+		//	Data.ei = 144
+		//:?Buff.needFire()
+		//	Data.ei = 164
+		:?Data.playerState > 1
+			Data.ei = 192
+		:
+			Data.ei = 104
+	:
+		Skill.useDashSkill()
+
+func bossFight_2()
+	?foe.distance <= 10
+		//狀態無效 vigor
+		//?Data.foeBuffs.vigorTimer & Data.playerState <= 2
+		//	Data.ei = 6
+		//?foe = fire & foe.state = 33
+		//	Data.bossDissolve = false
+
+		?foe = poison
+			Data.ei = 105
+		:?foe = vigor
+			Data.ei = 101
+		:?foe = aether
+			Data.ei = 102
+		:?foe = fire
+			Data.ei = 103
+			//消解
+			//?Data.bossDissolve & foe.time > 30 + Buff.iceEffect()
+			//	Data.ei = 4
+			//:
+			//	Data.ei = 103
+		:?foe = ice
+			Data.ei = 104
+		?foe.time < 30 + Buff.iceEffect()
+			?Data.foeBuffs.vigorTimer <= 0
+				?Buff.needIce()
+					Data.ei = 195
+				//:?Buff.needPoison() & Buff.needFire()
+				//	Data.ei = 106
+				//:?Buff.needPoison()
+				//	Data.ei = 144
+				//:?Buff.needFire()
+				//	Data.ei = 164
+				:?Data.playerState > 1
+					Data.ei = 192
+			:?Data.playerState > 1
+				Data.ei = 192
+	:
+		Skill.useDashSkill()
+
+func bossFight_3()
+	?foe.distance <= 10
+		?!Buff.needIce()
+			Data.bossAction = 1
+
+		?foe.armor > 0
+			Data.ei = 604
+			Skill.useHeavyHammerSkill()
+			return
+
+		?Data.playerBuffs.vampiricTimer | Data.playerBuffs.luckyTimer | Data.playerBuffs.strengthTimer
+			Data.ei = 104
+			return
+		:?Data.skillAction < 2 & !Buff.needIce() & //foe.hp > foe.maxhp / 2 &
+		^((item.potion = "lucky" & (item.GetCooldown("mind") > 0 | Data.bossAttackLoop = 3 | Data.bossAttackLoop = 0) & foe.armor <= 0) |
+		^(item.potion = "strength" & foe.armor > 4000))
+			Data.ei = 104
+			?Data.currentEquip = 104
+				activate potion
+			return
+
+
+		?(Data.bossAttackLoop ! 2 & Data.bossAttackLoop ! 5) & foe.state = 32 & foe.time > 30
+			Skill.useMaskSkill()
+			Data.ei = 144
+		//:?Buff.needFire()
+		//	Data.ei = 164
+		:?(Buff.needIce() & Data.bossAttackLoop ! 5 & !Data.bossAction) //| (Data.bossAttackLoop = 1 & foe.state = 2)
+			Data.ei = 195
+		:?Data.playerState > 2
+			Data.ei = 192
+
+		:?foe.buffs.string ! adaptive_defense_poison
+			Data.ei = 101
+		:?foe.buffs.string ! adaptive_defense_vigor
+			Data.ei = 102
+		:?foe.buffs.string ! adaptive_defense_aether
+			Data.ei = 103
+		:?foe.buffs.string ! adaptive_defense_fire
+			Data.ei = 104
+		:?foe.buffs.string ! adaptive_defense_ice
+			Data.ei = 105
+
+		?foe.distance > 5 & Data.ei ! 6
+			?Skill.useQuarterstaffSkill()
+				Data.skillAction++
+	:
+		?item.GetCooldown("mind") > 0 & foe.distance > 15
+			Skill.useQuarterstaffSkill()
+		:
+			Skill.useDashSkill()
+
+
+	//激光
+	?(foe.state = 115 & foe.time = 76) |
+
+	//暈+盾 time:29
+	^(Data.bossAttackLoop = 2 & foe.state = 32 & foe.time = 27 + Buff.iceEffect() & foe.distance < 8)
+		Skill.useMindStoneSkill()
+
+	?(foe.state = 32 | foe.state = 115) & foe.time = 0
+		Data.bossAttackLoop = (Data.bossAttackLoop + 1) % 6
+
+/*
+?(foe.hp > BardichePower * 4 &
+^(foe = phase1 | (foe = phase2 & foe.state = 33))) |
+^(foe = phase3 & !buffs.count & (Data.bossAttackLoop ! 2 & Data.bossAttackLoop ! 5))
+	Skill.useBardicheSkill()
+*/

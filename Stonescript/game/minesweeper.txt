@@ -1,19 +1,19 @@
+/*
+SSRPG Version: 3.49.4
+Version: 1.2
+author: xx
+instruction:
+	import minesweeper
 
-//SSRPG Version: 3.49.4
-//Version: 1.0
-//author: xx
+v1.2 edited by Mind Stone Thief
+Support Mobile
 
-//only PC
-
-/* instruction:
-//	import minesweeper
-
-if you feel stuck while running, can use
-//	var minesweeper = new minesweeper
-//	minesweeper.run(positive real number)
+if you feel stuck while running, can use:
+	var minesweeper = new minesweeper
+	minesweeper.run(positive real number)
 to change update frequency per frame
 
-update frequency per frame is default to 60
+update frequency per frame is default to 20
 */
 
 var text
@@ -24,26 +24,35 @@ var height = 9
 
 var mine = []
 var mineCount = 0
-var mineCountText = 0
 
 var flagCount = 0
 var targetCount = 0
 
-var boxW = 0
-var boxH = 0
-var boxX = 0
-var boxY = 0
+var mainBox
+var mainBoxText
+var mainBoxCanvas
+var targetBox
+var targetBoxText
+var timerBox
+var timerBoxText
+var titleText
+var guideText
+var difficultySelectionText
+
+var buttonList = []
+
+var inputX = -1
+var inputY = -1
 
 var state = "initialize"
 
 var difficulty = [[8,8,10], [16,16,40], [30,16,99]]
-var difficultyText = [["#0000ff","  [beginner]"], ["#00ff00","[intermediate]"], ["#ff0000","   [expert]"]]
+var difficultyText = [["#0000ff","beginner"], ["#00ff00","intermediate"], ["#ff0000","expert"]]
 var difficultyTextLength = 14
 var difficultyIndex = difficulty.Count() - 1
 
 var timer = 0
 var secTimer = 0
-var secTimerText = 0
 
 var cx = 0
 var cy = 0
@@ -53,58 +62,82 @@ var cl = []
 var ct = 0
 var cc = 0
 
-func main(fre)
-	?boxW > 0 & boxH > 0
-		draw.Box(boxX, boxY, boxW, boxH, #FFFFFF, 1)
-		draw.Box(boxX + boxW - 5, boxY - 2, 5, 3, #FFFFFF, 1)
-		draw.Box(boxX, boxY - 2, 5, 3, #FFFFFF, 1)
+var a = 0
+var b = 0
 
-	?state ! "title" & state ! "initialize"
-		?data.Count()
-			>`@boxX+1@,@boxY+1@,@text@
-		>`@boxX+boxW-4@,@boxY-1@,@secTimerText@
-		>`@boxX+1@,@boxY-1@,@mineCountText@
+func main(fre)
+	?loc.loop
+		createUI()
+		redraw()
 	
 	for i = 1..fre
-		?state = "playing"
+		?string.Equals(state, "playing")
 			?playing()
 				break
-		:?state = "processVicinityData"
+		:?string.Equals(state, "processVicinityData")
 			?processVicinityData()
 				break
-		:?state = "title"
+		:?string.Equals(state, "title")
 			?title()
 				break
-		:?state = "win"
-			?win()
-				break
-		:?state = "drawMines"
+		:?string.Equals(state, "drawMines")
 			?drawMines()
 				break
-		:?state = "gameover"
-			?gameover()
-				break
-		:?state = "setupData"
+		:?string.Equals(state, "setupData")
 			?setupData()
 				break
-		:?state = "setupTarget"
+		:?string.Equals(state, "setupTarget")
 			?setupTarget()
 				break
-		:?state = "initialize"
+		:?string.Equals(state, "restart")
+			?restart()
+				break
+		:?string.Equals(state, "initialize")
 			?initialize()
 				break
+		:
+			break
 
+	globalInput()
+
+	//showdata(fre)
+
+func globalInput()
 	?key = bumpRBegin
 		createMap()
 	:?key = backEnd
-		changeState("initialize")
-
-
+		changeState("restart")
 
 func initialize()
+	key.Bind(BumpL, Z, Mouse1)
+	createUI()
+	changeState("restart")
+	return true
+
+func restart()
+	mainBoxText.visible = false
 	setupLevel(difficulty.Count() - 1)
+	setTimerBoxText(0)
+	setDifficultySelectionText()
+	difficultySelectionText.visible = inherit
 	changeState("title")
 	return true
+
+func setupScreen()
+	mainBox.w = width + 2
+	mainBox.h = height + 2
+	mainBox.y = 1
+
+	mainBoxText.w = width
+	mainBoxText.h = height
+
+	titleText.y = -mainBox.h / 4
+
+	targetBox.x = mainBox.x - mainBox.w / 2 + 2
+	targetBox.y = mainBox.y - mainBox.h / 2 - 2
+
+	timerBox.x = mainBox.x + mainBox.w / 2 - 3
+	timerBox.y = targetBox.y
 
 func initcache()
 	cx = 0
@@ -120,22 +153,23 @@ func setupLevel(i)
 	height = difficulty[i][1]
 	mineCount = difficulty[i][2]
 
-	mineCountText = numberToString(mineCount)
+	setTargetBoxText(0)
 
 	flagCount = 0
 	targetCount = width * height - mineCount
 	
-	boxW = width + 2
-	boxH = height + 2
-	boxX = Math.clamp((screen.w - boxW) / 2, 0, screen.w - boxW)
-	boxY = Math.clamp((screen.h - boxH) / 2 + 1, 0, screen.h - boxH)
+	setupScreen()
 
 func createMap()
+	mainBoxText.visible = false
+	titleText.visible = false
+	guideText.visible = false
+	difficultySelectionText.text = "loading..."
+	difficultySelectionText.visible = inherit
+
 	setupLevel(difficultyIndex)
 
-	timer = 0
-	secTimer = 0
-	secTimerText = "000"
+	initTimer()
 
 	initcache()
 	text = ""
@@ -143,25 +177,9 @@ func createMap()
 	mine.Clear()
 	changeState("setupTarget")
 
-
 func title()
-	showTitleText("rainFF", "M I N E S W E E P E R")
-
-	cx = boxX + (boxW - difficultyTextLength) / 2
-	cy = boxY + boxH * 2 / 3
-	>`@cx-1@,@cy@,#ffffff,>
-
-	?difficultyIndex - 1 >= 0
-		>`@boxX + boxW / 2@,@cy-2@,▲
-		>`@cx@,@cy-1@,@difficultyText[difficultyIndex-1][0]@,@difficultyText[difficultyIndex-1][1]@
-
-	>`@cx@,@cy@,@difficultyText[difficultyIndex][0]@,@difficultyText[difficultyIndex][1]@
-
-	?difficultyIndex + 1 < difficulty.Count()
-		>`@cx@,@cy+1@,@difficultyText[difficultyIndex+1][0]@,@difficultyText[difficultyIndex+1][1]@
-		>`@boxX + boxW / 2@,@cy+2@,▼
-
-	showGuideText("99ccff", "X-GoToTitle  C-StartGame")
+	setTitleText("#rainFF", 1) //"M I N E S W E E P E R"
+	setGuideText("#99ccff", "↑↓-SwchLv  X-Back  C-(Re)Start")
 
 	?key = up | key = down
 		?key = upEnd | key = downEnd
@@ -172,27 +190,38 @@ func title()
 					difficultyIndex = (difficultyIndex + difficulty.Count() - 1) % difficulty.Count()
 				:?key = down
 					difficultyIndex = (difficultyIndex + 1) % difficulty.Count()
+				setDifficultySelectionText()
 			ct = (ct + 1) % 5
 
 	return true
 
+func setDifficultySelectionText()
+	var t = ""
+	?difficultyIndex - 1 >= 0
+		t += string.Format("▲\n[color={0}]{1}[/color]\n", difficultyText[difficultyIndex - 1][0],  difficultyText[difficultyIndex - 1][1])
+	:
+		t += "\n\n"
+	t += string.Format("[[color={0}]{1}[/color]]", difficultyText[difficultyIndex][0], difficultyText[difficultyIndex][1])
+	?difficultyIndex + 1 < difficulty.Count()
+		t += string.Format("\n[color={0}]{1}[/color]\n▼", difficultyText[difficultyIndex + 1][0],  difficultyText[difficultyIndex + 1][1])
+	:
+		t += "\n\n"
+	difficultySelectionText.text = t
+
+func setTitleText(color, frame)
+	titleText.frame = frame
+	titleText.color = color
+	titleText.visible = inherit
+
+func setGuideText(color, frame)
+	guideText.text = frame
+	guideText.color = color
+	guideText.visible = inherit
+
+
 func win()
-	showTitleText("rainFF", "Y O U  W I N")
-	showGuideText("99ccff", "X-GoToTitle  C-RestartGame")
-	return true
-
-func gameover()
-	showTitleText("cc0000", "gameover")
-	showGuideText("99ccff", "X-GoToTitle  C-RestartGame")
-	return true
-
-func showTitleText(color, str)
-	>`@boxX + (boxW - string.Size(str)) / 2@,@boxY + boxH / 3 - 2@,#@color@,@str@
-
-func showGuideText(color, str)
-	>`@boxX + (boxW - string.Size(str)) / 2@,@boxY + boxH - 2@,#@color@,@str@
-
-
+	setTitleText("#rainFF", 2) //"Y O U  W I N"
+	setGuideText("#99ccff", "X-GoToTitle  C-RestartGame")
 
 func drawMines()
 	?mine.Count()
@@ -202,14 +231,17 @@ func drawMines()
 		whiteDataToScreen(cx, cy, "@")
 		mine.RemoveAt(0)
 	:
+		gameover()
 		changeState("gameover")
 	return true
+
+func gameover()
+	setTitleText("#cc0000", 3) //"gameover"
+	setGuideText("#99ccff", "X-GoToTitle  C-RestartGame")
 
 func setupData()
 	?data.Count() < height * width
 		?ct ! data.Count()
-			?data.Count() % width = 0 & data.Count() ! 0
-				text += "\n"
 			cx = data.Count() % width
 			cy = math.FloorToInt(data.Count() / width)
 
@@ -241,6 +273,9 @@ func setupData()
 				cx2 = cx - 1
 				cy2++
 	:
+		mainBoxText.text = text
+		mainBoxText.visible = inherit
+		difficultySelectionText.visible = false
 		changeState("playing")
 		return true
 	return false
@@ -248,6 +283,7 @@ func setupData()
 func addData(s)
 	data.Add([s, 0])
 	text += "o"
+	setTimerBoxText(width * height - data.Count())
 
 func setupTarget()
 	?mine.Count() < mineCount
@@ -255,60 +291,67 @@ func setupTarget()
 		var y = rng % height
 		?!isTarget(x, y)
 			mine.Add([x, y])
+			setTargetBoxText(mine.Count())
 	:
 		changeState("setupData")
 		return true
 	return false
 
 func isTarget(x, y)
-	?mine.Count() & targetInRange(x, y)
+	?mine.Count() & inRange(x, y)
 		for i = 0..mine.Count() - 1
 			?x = mine[i][0] & y = mine[i][1]
 				return true
 	return false
 
-
-
 func playing()
-	>`@boxX@,@boxY+boxH-1@,Z-flag
+	>`@mainBox.absoluteX@,@mainBox.absoluteY+mainBox.h-1@,Z/R.->flag
+	updateTimer()
+	?key = primaryBegin | key = bumpLBegin
+		var x = input.x - (mainBox.absoluteX + 1)
+		var y = input.y - (mainBox.absoluteY + 1)
+		?inRange(x, y)
+			?key = bumpLBegin
+				?flagTile(x, y)
+					return false
+			:?key = primaryBegin
+				?openTile(x, y)
+					return false
+	return true
 
+func initTimer()
+	timer = 0
+	secTimer = 0
+	setTimerBoxText(width * height)
+
+func updateTimer()
 	timer = (timer + 1) % 30
 	?!timer
 		secTimer++
-		secTimerText = numberToString(secTimer)
-
-	?key = primaryBegin | key = bumpLBegin
-		var inputX = input.x - (boxX + 1)
-		var inputY = input.y - (boxY + 1)
-
-		?inRange(input.x,input.y,boxX+1,boxY+1,width,height)
-			?key = bumpLBegin
-				flagTile(inputX, inputY)
-			:?key = primaryBegin & openTile(inputX, inputY)
-				return false
-	return true
+		setTimerBoxText(secTimer)
 
 func flagTile(x,y)
-	var z = data[getIndex(x, y, 0)]
+	var z = data[getIndex(x, y)]
 	?!z[1]
 		z[1] = -1
 		whiteDataToScreen(x, y, "▶")
-		addFlagCount(1)
+		flagCount++
+		setTargetBoxText(mineCount - flagCount)
 	:?z[1] < 0
 		z[1] = 0
 		whiteDataToScreen(x, y, "o")
-		addFlagCount(-1)
+		flagCount--
+		setTargetBoxText(mineCount - flagCount)
 	return false
 
 func openTile(x, y)
-	var z = data[getIndex(x, y, 0)]
+	var z = data[getIndex(x, y)]
+
 	?z[0] = "@"
 		whiteDataToScreen(x, y, z[0])
-
-		initcache()
-		changeState("drawMines")
-
+		startGameOver()
 		return true
+
 	:?!z[1]
 		z[1] = 1
 		targetCount--
@@ -316,37 +359,48 @@ func openTile(x, y)
 		whiteDataToScreen(x, y, z[0])
 
 		?z[0] = "#"
-			?state ! "processVicinityData"
-				initcache()
-				changeState("processVicinityData")
-			cl.Add([x, y])
+			startProcessVicinityData(x, y)
 			return true
 		:?!targetCount
+			win()
 			changeState("win")
 	return false
 
 func whiteDataToScreen(x, y, n)
-	var z = getIndex(x, y, 1)
+	var z = getIndex(x, y)
 	text = string.sub(text, 0, z) + n + string.sub(text, z + 1)
+	mainBoxText.text = text
 
+func startGameOver()
+	initcache()
+	changeState("drawMines")
+
+func startProcessVicinityData(x, y)
+	?state ! "processVicinityData"
+		initcache()
+		changeState("processVicinityData")
+	cl.Add([x, y])
 
 func processVicinityData()
 	?!cc
 		?ct < cl.Count()
 			var z = cl[ct]
+
 			cx = z[0]
 			cy = z[1]
 
 			cc = 8
+
 			ct++
 		:
 			changeState("playing")
 			return true
+
 	:
 		cx2 = cx + getoffset(cc + 1)
 		cy2 = cy + getoffset(cc + 3)
 
-		?targetInRange(cx2, cy2)
+		?!(cx2 = cx & cy2 = cy) & inRange(cx2, cy2)
 			openTile(cx2, cy2)
 
 		cc--
@@ -362,31 +416,135 @@ func getoffset(n)
 	:
 		return 0
 
-func targetInRange(x, y)
-	return inRange(x, y, 0, 0, width, height)
+func inRange(x, y)
+	return x >= 0 & x < width & y >= 0 & y < height
 
-func inRange(x, y, X, Y, W, H)
-	return x >= X & x < X + W & y >= Y & y < Y + H
+func showdata(fre)
+	>@fre@ @state@ @difficultyIndex@\n
+	^@inputX@ @inputY@ @ct@ @cc@\n
+	^@cx@ @cy@ @cx2@ @cy2@\n
+	^@cl.Count()@ @input.x@ @input.y@\n
+	^@screen.w@ @screen.h@ @targetCount@\n
+	^@mainBox.absoluteX@ @mainBox.absoluteY@ @a@ @b@
 
-func addFlagCount(n)
-	flagCount += n
-	mineCountText = numberToString(math.max(0, mineCount - flagCount))
+func setTimerBoxText(n)
+	timerBoxText.text = numberToString(math.max(0, n))
+
+func setTargetBoxText(n)
+	targetBoxText.text = numberToString(math.max(0, n))
 
 func changeState(str)
 	state = str
 
+func createUI()
+	mainBox = ui.AddPanel()
+	
+	mainBoxText = ui.AddText()
+	mainBoxText.visible = false
+	mainBox.Add(mainBoxText)
+
+	targetBox = ui.AddPanel()
+	targetBox.w = 5
+	targetBox.h = 3
+
+	targetBoxText = ui.AddText()
+	targetBoxText.text = "000"
+	targetBoxText.w = 3
+	targetBoxText.h = 1
+	targetBox.Add(targetBoxText)
+
+	timerBox = ui.AddPanel()
+	timerBox.w = 5
+	timerBox.h = 3
+
+	timerBoxText = ui.AddText()
+	timerBoxText.text = "000"
+	timerBoxText.w = 3
+	timerBoxText.h = 1
+	timerBox.Add(timerBoxText)
+
+	titleText = ui.AddAnim(ascii
+
+%%
+M I N E S W E E P E R
+%%
+####Y O U   W I N
+%%
+######gameover
+asciiend)
+	titleText.Stop()
+	mainBox.Add(titleText)
+
+	guideText = ui.AddText()
+	guideText.w = screen.w
+	guideText.h = 1
+	guideText.y = -1
+	guideText.align = center
+	guideText.anchor = bottom_center
+	guideText.dock = bottom_center
+	mainBox.Add(guideText)
+	
+
+	difficultySelectionText = ui.AddText()
+	difficultySelectionText.w = screen.w
+	difficultySelectionText.y = mainBox.y + mainBox.h * 2 / 3
+	difficultySelectionText.align = center
+	mainBox.Add(difficultySelectionText)
+
+	setupScreen()
+	
+	BuildArrowButton(0, 0, •)
+	BuildArrowButton(0, -3, ↑)
+	BuildArrowButton(0, 3, ↓)
+	BuildArrowButton(5, 0, ←)
+
+func BuildArrowButton(x, y, t)
+	var button = ui.AddButton()
+	button.text = t
+	button.w = 5
+	button.h = 3
+	button.x = x
+	button.y = y
+	button.style = 1
+	button.anchor = center_left
+	button.dock = center_left
+	button.SetPressed(buttonAction)
+	buttonList.Add(button)
+
+func buttonAction(btn)
+	?buttonList[0] = btn
+		createMap()
+	:?buttonList[1] = btn
+		difficultyIndex = (difficultyIndex + difficulty.Count() - 1) % difficulty.Count()
+		setDifficultySelectionText()
+	:?buttonList[2] = btn
+		difficultyIndex = (difficultyIndex + 1) % difficulty.Count()
+		setDifficultySelectionText()
+	:?buttonList[3] = btn
+		changeState("restart")
+
+func redraw()
+	?string.Equals(state, "playing") | string.Equals(state, "drawmines") |
+	^string.Equals(state, "win") | string.Equals(state, "gameover")
+		mainBoxText.text = text
+		mainBoxText.visible = inherit
+		setTargetBoxText(mineCount - flagCount)
+		setTimerBoxText(secTimer)
+		?string.Equals(state, "win")
+			win()
+		:?string.Equals(state, "gameover")
+			gameover()
+	:?string.Equals(state, "title")
+		restart()
 
 func run(fre)
 	main(fre)
 
-main(60)
+main(20)
 
 
-func getIndex(x, y, t)
-	?t
-		return (width + 2) * y + x
-	:
-		return width * y + x
+func getIndex(x, y)
+	return width * y + x
 
 func numberToString(n)
 	n = "00" + n

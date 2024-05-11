@@ -1,0 +1,341 @@
+
+//SSRPG Version: 3.49.4
+//Version: 0.8
+//author: xx, Mind Stone Thief
+//and Okamiroy’s assistance
+
+/* instruction:
+	Put it in Games folder, and enter
+//	import Games/rogue
+	in Mind Stone
+*/
+
+var data = new Games/rogue/gamedata
+var map = new Games/rogue/map
+var battler = new Games/rogue/battler
+var ladder = []
+var mapItem = []
+
+var level = 1
+var gold = 0
+
+var backpack = []
+var itemMaxNumber = 10
+var gold = 0
+
+var mainWindow
+var mapText
+var biologyCanvas
+var itemCanvas
+var fade
+var fadeIndex = 30.0
+var stateBar
+
+var enemy = []
+var treasure = []
+
+var delay = 0
+
+var turn = 0
+
+
+var state = "initialize"
+
+func main()
+	?string.Equals(state, "initialize")
+		createUI()
+		state = "createMap"
+	:?string.Equals(state, "createMap")
+		createMap()
+		state = "fadein"
+	:?string.Equals(state, "playerAction")
+		?playerAction()
+			state = "enemyAction"
+	:?string.Equals(state, "enemyAction")
+		enemyAction()
+		state = "playerAction"
+	:?string.Equals(state, "fadeout")
+		fadeIndex++
+		fade.SetFG(color.Lerp(#FFFFFF, #000000, (30 - fadeIndex) / 30))
+		?fadeIndex >= 30 + 5
+			state = "createMap"
+	:?string.Equals(state, "fadein")
+		fadeIndex--
+		fade.SetFG(color.Lerp(#FFFFFF, #000000, (30 - fadeIndex) / 30))
+		?fadeIndex <= 0
+			state = "playerAction"
+
+	>@state@ @input.x-biologyCanvas.absoluteX@ @input.y-biologyCanvas.absoluteY@ @battler.x@ @battler.y@ @turn@\n
+	^@map.canMove(battler.x - 1, battler.y)@ @map.canMove(battler.x + 1, battler.y)@ @map.canMove(battler.x, battler.y - 1)@ @map.canMove(battler.x, battler.y + 1)@\n
+	^@4 + level / 8 + level / 8@ @delay@ @backpack.Count()@
+
+	?enemy.Count()
+		for i = 0..enemy.Count() - 1
+			>`0,@4+i@,@enemy[i].x@ @enemy[i].y@
+
+	?key = backbegin
+		level = 1
+		state = "createMap"
+
+func sett()
+	mapText.text = map.text
+
+func createItem()
+	mapItem.Clear()
+	
+	var r
+	var x
+	var y
+	var d
+	var ni
+	var number = map.roomCount() - rng % (map.roomCount() / 2)
+	for i = 1..number
+		r = map.room(rng % map.roomCount())
+		x = r.x + rng % r.width
+		y = r.y + rng % r.height
+		?getMapItem(x, y) = -1
+			d = data.potion[rng % (data.potion.Count() - 1) + 1]
+			ni = new Games/rogue/item
+			ni.getData(x, y, d)
+			mapItem.Add(ni)
+			itemCanvas.Set(x, y, "P")
+		:
+			i--
+
+func createEnemy()
+	enemy.Clear()
+
+	var index
+	var r
+	var x
+	var y
+	var d
+	var ne
+	var number = map.roomCount()
+	for i = 1..number
+		index = rng % (map.roomCount() - 1)
+		?index >= battler.posIndex
+			index++
+		r = map.room(index)
+		x = r.x + rng % r.width
+		y = r.y + rng % r.height
+		?getEnemy(x, y) = -1
+			d = data.enemy[rng % (data.enemy.Count() - 1) + 1]
+			ne = new Games/rogue/enemy
+			ne.getData(x, y, d)
+			enemy.Add(ne)
+			biologyCanvas.Set(x, y, ne.mapArt)
+
+func setCharPos()
+	var i = rng % map.roomCount()
+	var r = map.room(i)
+	battler.setPos(r.x + rng % r.width, r.y + rng % r.height)
+	battler.posIndex = i
+	battler.posType = "room"
+	r.setBright(true)
+	biologyCanvas.Set(battler.x, battler.y, "@")
+
+func setLadderPos()
+	var r = map.room(rng % map.roomCount())
+	ladder = [r.x + rng % r.width, r.y + rng % r.height]
+	itemCanvas.Set(ladder[0], ladder[1], "⚿")
+
+func setStateBar()
+	stateBar.text = string.Format(
+	^"Level:  {0} Gold:  {1} Hp:  {2}({3}) Atk:  {4} Def:  {5} Exp:  {6}",
+	^level, gold, battler.hp_, battler.maxhp_, battler.atk, battler.def, battler.exp)
+
+func playerAction()
+	?checkMove()
+		var i
+		turn++
+		i = getEnemy(battler.x, battler.y)
+		?i >= 0
+			battler.back()
+			attack(battler, enemy[i])
+			?enemy[i].die()
+				drawChar(enemy[i])
+				enemy.RemoveAt(i)
+		:
+			drawChar(battler)
+			?battler.x = ladder[0] & battler.y = ladder[1]
+				level++
+				fadeIndex = 0.0
+				state = "fadeout"
+				return false
+			:?backpack.Count() < itemMaxNumber
+				i = getMapItem(battler.x, battler.y)
+				?i >= 0
+					backpack.Add(mapItem[i])
+					itemCanvas.Set(mapItem[i].x, mapItem[i].y, "#")
+					mapItem.RemoveAt(i)
+		return true
+	return false
+
+func enemyAction()
+	var e
+	?enemy.Count()
+		for i = 0..enemy.Count() - 1
+			e = enemy[i]
+			?e.hp_ <= 0
+				drawChar(e)
+				enemy.RemoveAt(i)
+			?e.x = battler.x
+				?e.y - battler.y = math.Clamp(e.y - battler.y, -1, 1)
+					attack(e, battler)
+				:?e.y > battler.y
+					enemyMove(e, [8, 6, 4, 2])
+				:
+					enemyMove(e, [2, 4, 8, 6])
+			:?e.y = battler.y
+				?e.x - battler.x = math.Clamp(e.x - battler.x, -1, 1)
+					attack(e, battler)
+				:?e.x > battler.x
+					enemyMove(e, [4, 2, 6, 8])
+				:
+					enemyMove(e, [6, 8, 4, 2])
+			:?e.y > battler.y
+				?e.x < battler.x // 1 quadrant
+					enemyMove(e, [8, 6, 2, 4])
+				: // 2 quadrant
+					enemyMove(e, [8, 4, 2, 6])
+			:
+				?e.x < battler.x // 4 quadrant
+					enemyMove(e, [2, 6, 8, 4])
+				: // 3 quadrant
+					enemyMove(e, [2, 4, 8, 6])
+			drawChar(e)
+
+func enemyMove(e, order)
+	for i = 0..3
+		?order[i] = 2
+			?canMove(e.x, e.y + 1)
+				e.setPos(e.x, e.y + 1)
+				return
+		:?order[i] = 4
+			?canMove(e.x - 1, e.y)
+				e.setPos(e.x - 1, e.y)
+				return
+		:?order[i] = 6
+			?canMove(e.x + 1, e.y)
+				e.setPos(e.x + 1, e.y)
+				return
+		:?order[i] = 8
+			?canMove(e.x, e.y - 1)
+				e.setPos(e.x, e.y - 1)
+				return
+
+func attack(source, target)
+	target.hp_ -= source.atk - target.def * 2
+	setStateBar()
+
+func setDirection(direction)
+	?direction = 2
+		?map.canMove(battler.x, battler.y + 1)
+			battler.setPos(battler.x, battler.y + 1)
+			return true
+	:?direction = 4
+		?map.canMove(battler.x - 1, battler.y)
+			battler.setPos(battler.x - 1, battler.y)
+			return true
+	:?direction = 6
+		?map.canMove(battler.x + 1, battler.y)
+			battler.setPos(battler.x + 1, battler.y)
+			return true
+	:?direction = 8
+		?map.canMove(battler.x, battler.y - 1)
+			battler.setPos(battler.x, battler.y - 1)
+			return true
+	return false
+
+func checkMove()
+	?delay
+		delay--
+	:
+		?key = down | key = left | key = right | key = up
+			delay = 5
+			?key = down
+				return setDirection(2)
+			:?key = left
+				return setDirection(4)
+			:?key = right
+				return setDirection(6)
+			:?key = up
+				return setDirection(8)
+	return false
+
+func drawChar(char)
+	?char.previousX >= 0 & char.previousY >= 0
+		biologyCanvas.Set(char.previousX, char.previousY, "#")
+	?char.hp_ > 0
+		biologyCanvas.Set(char.x, char.y, char.mapArt)
+	:
+		biologyCanvas.Set(char.x, char.y, "#")
+
+func createMap()
+	turn = 0
+	itemCanvas.Set("#")
+	biologyCanvas.Set("#")
+	map.createMap(level)
+	setCharPos()
+	createItem()
+	createEnemy()
+	sett()
+	setStateBar()
+	setLadderPos()
+	fadeIndex = 30.0
+
+func createUI()
+	mainWindow = ui.AddPanel()
+	mainWindow.w = map.width + 2
+	mainWindow.h = map.height + 2
+
+	mapText = ui.AddText()
+	mapText.w = map.width
+	mapText.h = map.height
+	mainWindow.Add(mapText)
+
+	itemCanvas = ui.AddCanvas()
+	itemCanvas.w = map.width
+	itemCanvas.h = map.height
+	mainWindow.Add(itemCanvas)
+
+	biologyCanvas = ui.AddCanvas()
+	biologyCanvas.w = map.width
+	biologyCanvas.h = map.height
+	mainWindow.Add(biologyCanvas)
+
+	fade = ui.AddCanvas()
+	fade.w = map.width
+	fade.h = map.height
+	fade.blend = subtract
+	fade.SetFG(#FFFFFF)
+	mainWindow.Add(fade)
+
+	stateBar = ui.AddText()
+	stateBar.w = map.width
+	stateBar.h = 1
+	stateBar.x = mainWindow.absoluteX + 1
+	stateBar.y = mainWindow.absoluteY + mainWindow.h
+	stateBar.anchor = top_left
+	stateBar.dock = top_left
+	setStateBar()
+
+main()
+
+func getMapItem(x, y)
+	?mapItem.Count()
+		for i = 0..mapItem.Count() - 1
+			?x = mapItem[i].x & y = mapItem[i].y
+				return i
+	return -1
+
+func getEnemy(x, y)
+	?enemy.Count()
+		for i = 0..enemy.Count() - 1
+			?x = enemy[i].x & y = enemy[i].y
+				return i
+	return -1
+
+func canMove(x, y)
+	return map.canMove(x, y) & getEnemy(x, y) = -1

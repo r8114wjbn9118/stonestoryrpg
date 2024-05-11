@@ -1,0 +1,182 @@
+var width = 60
+var height = 20
+var data = []
+var text = ""
+var roomList = []
+var way = []
+
+var z = 0
+
+func room(i)
+	?i >= 0 & i < roomCount()
+		return roomList[i]
+
+func roomCount()
+	return roomList.Count()
+
+func createMap(level)
+	var maxRoomNumber = math.Min(12, 4 + level / 8 + rng % level / 4)
+	createRoom(maxRoomNumber)
+	connectRoom()
+	createData()
+
+func createRoom(maxRoomNumber)
+	roomList.Clear()
+
+	var r
+	var maxWidth = 12
+	var maxHeight = 4
+
+	var w
+	var h
+	var x
+	var y
+
+	for i = 1..maxRoomNumber
+		r = new Games/rogue/room
+		w = rng % (maxWidth - 1) + 3
+		h = rng % (maxHeight - 1) + 3
+
+		for j = 0..0
+			x = rng % (width - w)
+			y = rng % (height - h)
+
+			?inRoomRange(x, y, w, h)
+				j = j - 1
+		r.set(x, y, w, h)
+		roomList.Add(r)
+
+
+func connectRoom()
+	way.Clear()
+
+	var n = roomCount() + rng % roomCount() / 4
+	var index1
+	var index2
+	var x
+	var y
+	var x1
+	var y1
+	var x2
+	var y2
+	var d = []
+
+	for i = 0..roomCount() - 1
+		d = [0,0,0,0] // 2 4 6 8
+
+		?i < roomCount()
+			index1 = i
+			index2 = (index1 + 1) % roomCount()
+		:
+			index1 = rng % roomCount()
+			index2 = rng % (roomCount() - 1)
+			?index2 >= i
+				index2++
+		
+		x1 = room(index1).x + rng % room(index1).width
+		y1 = room(index1).y + rng % room(index1).height
+		x2 = room(index2).x + rng % room(index2).width
+		y2 = room(index2).y + rng % room(index2).height
+
+		?x1 = x2 | y1 = y2
+			x = x1
+			y = y1
+			?x1 = x2
+				?y1 > y2
+					d[3] = y1 - y2
+				:
+					d[0] = y2 - y1
+			:
+				?x1 > x2
+					d[1] = x1 - x2
+				:
+					d[2] = x2 - x1
+		:
+			?rng % 2
+				y = math.Min(y1, y2)
+				?((y2 - y1) * 1.0 / (x1 - x2)) > 0
+					x = math.Min(x1, x2)
+				:
+					x = math.Max(x1, x2)
+			:
+				y = math.Max(y1, y2)
+				?((y2 - y1) * 1.0 / (x1 - x2)) > 0
+					x = math.Max(x1, x2)
+				:
+					x = math.Min(x1, x2)
+
+			?x > x1
+				d[1] = x - x1
+			:?x < x1
+				d[2] = x1 - x
+			:?x > x2
+				d[1] = x - x2
+			:?x < x2
+				d[2] = x2 - x
+
+			?y > y1
+				d[3] = y - y1
+			:?y < y1
+				d[0] = y1 - y
+			:?y > y2
+				d[3] = y - y2
+			:?y < y2
+				d[0] = y2 - y
+
+		way.Add([[x, y],d])
+
+func createData()
+	data.Clear()
+	text = ""
+
+	var p
+
+	for i = 1..width * height
+		data.Add("░")
+	for i = 0..way.Count() - 1
+		p = way[i]
+		for x = p[0][0] - p[1][1]..p[0][0] + p[1][2]
+			data[getIndex(x, p[0][1])] = "."
+		for y = p[0][1] - p[1][3]..p[0][1] + p[1][0]
+			data[getIndex(p[0][0], y)] = "."
+	for i = 0..roomCount() - 1
+		p = room(i)
+		for y = p.y..p.y + p.height - 1
+			for x = p.x..p.x + p.width - 1
+				data[getIndex(x, y)] = "o"
+
+	for i = 0..data.Count() - 1
+		text += data[i]
+
+func inRoomRange(x, y, w, h)
+	var r
+	?roomCount()
+		for i = 0..roomCount() - 1
+			r = roomList[i]
+			?rangeInRange(x, y, w, h, r.x, r.y, r.width, r.height)
+				return true
+	return false
+
+func rangeInRange(x, y, w, h, X, Y, W, H)
+	return x + w >= X & X + W >= x & y + h >= Y & Y + H >= y
+
+func canMove(x, y)
+	?inRange(x, y, 0, 0, width, height)
+		var s = data[getIndex(x, y)]
+		?s ! "░"
+			return true
+	return false
+
+func inRange(x, y, X, Y, W, H)
+	return x >= X & x < X + W & y >= Y & y < Y + W
+
+func getIndex(x, y)
+	return width * y + x
+
+func c()
+	?roomCount()
+		for i = 0..roomCount() - 1
+			>`0,@i+1@,@roomList[i].x@ @roomList[i].y@  @roomList[i].width@ @roomList[i].height@
+	?way.Count()
+		for i = 0..way.Count() - 1
+			>`0,@i+2+roomCount()@,@way[i][0][0]@ @way[i][0][1]@  @way[i][1][1]@ @way[i][1][2]@  @way[i][1][0]@ @way[i][1][3]@

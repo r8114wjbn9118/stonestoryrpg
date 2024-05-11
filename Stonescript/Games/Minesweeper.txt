@@ -2,15 +2,17 @@
 SSRPG Version: 3.49.4
 Version: 1.2
 author: xx
+*/
+/*
 instruction:
-	import minesweeper
+//	import Games/Minesweeper
 
 v1.2 edited by Mind Stone Thief
 Support Mobile
 
 if you feel stuck while running, can use:
-	var minesweeper = new minesweeper
-	minesweeper.run(positive real number)
+//	var minesweeper = new Games/Minesweeper
+//	minesweeper.run(positive real number)
 to change update frequency per frame
 
 update frequency per frame is default to 20

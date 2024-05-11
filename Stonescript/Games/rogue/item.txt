@@ -1,0 +1,25 @@
+var x
+var y
+var name
+var t //(weapon, armor, shield, accessories, potion)
+var hp_
+var atk
+var def
+var buff
+
+var mapArt
+var description
+var art
+
+func getData(X, Y, data)
+	x = X
+	y = Y
+	name = data[0]
+	t = data[1]
+	hp_ = data[2]
+	atk = data[3]
+	def = data[4]
+	buff = data[5]
+	mapArt = data[6]
+	description = data[7]
+	art = data[8]

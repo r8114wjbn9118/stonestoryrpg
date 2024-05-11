@@ -3,7 +3,7 @@ Snake
 v2.2.2
 SSRPG Version: 3.49.4
 instruction:
-	import Snake
+	import Games/Snake
 
 Support mobile control via UI panel, store highest score permanently
 Bigger food, smaller canvas->more comfortable game experience

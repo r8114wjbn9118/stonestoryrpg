@@ -3,7 +3,7 @@
 //author: xx
 
 // instruction:
-// import bear
+// import Cosmetics/Bear
 
 
 ////////// ascii data // start //////////

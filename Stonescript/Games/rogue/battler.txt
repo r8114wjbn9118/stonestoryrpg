@@ -1,0 +1,37 @@
+var x = -1
+var y = -1
+var previousX = -1
+var previousY = -1
+var posIndex = -1
+var posType = ""
+var level = 1
+var exp = 0
+
+var buff = []
+
+//
+var e = [null, null]
+
+var hp_ = 60
+var maxhp_ = 60
+var atk = 1
+var def = 0
+var elements = null
+
+var mapArt = "@"
+
+func setPos(X, Y)
+	previousX = x
+	previousY = y
+	x = X
+	y = Y
+
+func back()
+	?previousX >= 0 & previousY >= 0
+		x = previousX
+		y = previousY
+		previousX = -1
+		previousY = -1
+
+func die()
+	return hp_ <= 0

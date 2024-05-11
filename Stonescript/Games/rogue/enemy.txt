@@ -1,0 +1,36 @@
+var x = -1
+var y = -1
+var previousX = -1
+var previousY = -1
+
+var name = ""
+var hp_ = 0
+var atk = 0
+var def = 0
+var buff = []
+var elemental = null
+
+var mapArt = ""
+var description = ""
+var art = ""
+
+func getData(X, Y, data)
+	x = X
+	y = Y
+	name = data[0]
+	hp_ = data[1]
+	atk = data[2]
+	def = data[3]
+	elemental = data[4]
+    mapArt = data[5]
+	description = data[6]
+	art = data[7]
+
+func setPos(X, Y)
+	previousX = x
+	previousY = y
+	x = X
+	y = Y
+
+func die()
+	return hp_ <= 0

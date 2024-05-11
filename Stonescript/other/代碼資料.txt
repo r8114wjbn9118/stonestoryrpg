@@ -1,0 +1,117 @@
+//吸取掉落物
+?pickup.distance <= 5 //與掉落物的距離,根據需要自行調整
+ equipL trisk //三曲腿加移速
+ equipR star //星石吸取
+
+//資源採集
+?harvest.distance < 5 //資源點距離
+ ?harvest = boulder //巨石
+  equip shovel //鏟子
+ :?harvest = tree //樹
+  equipL moon //月石加攻速
+  equipR hatchet //斧頭
+  ?item.right.state ! 2 //如果斧頭不在行動
+   activate R //使用斧頭技能
+
+//盾衝 因為普通的前衝盾冷卻比遺物盾快, 所以先使用前衝盾
+?foe.distance > 10 & foe.distance <= 16 //可使用範圍
+ ?item.GetCooldown("dash") <= 0 //前衝盾
+  equipL trisk //隨便塞點東西
+  equipR dash
+ :?item.GetCooldown("bash") <= 0 //遺物盾
+  equipL trisk //隨便塞點東西
+  equipR bash
+
+//木棒衝刺
+?item.GetCooldown("quarterstaff") <= 0
+ equip quarterstaff
+ activate R
+ return
+
+//躲避
+?item.GetCooldown("mind") <= 0
+ equipL quest //隨便塞點東西
+ equipR mind
+ return
+
+//月牙
+?(item.GetCooldown("bardiche") <= 0 &
+^foe.distance <= 10) |
+^(item.right = bardiche & item.right.state = 2) //攻擊中, 可能會把普通攻擊誤判為技能使用
+ equip bardiche
+ activate R
+ return
+
+//墮神
+?item.GetCooldown("blade")<=0&foe.distance<=23
+^ & foe.count >= 5 //怪物數量可以根據需要調整,甚至不寫都可以
+ equip blade
+ activate R
+
+//跨屏墮神
+?item.GetCooldown("blade")<=0&foe.distance<=23
+^ & foe.count >= 5 //怪物數量可以根據需要調整,甚至不寫都可以
+ screen.Next()
+?screen.x = screen.i * 69 + 55 //大致範圍, 可能會漏掉一兩隻, 根據需要自行調整
+ equip blade
+ activate R
+ screen.ResetOffset()
+
+//面具
+?item.GetCooldown("mask")<=0&foe.distance<24 //如果需要跨屏可以刪掉後面的距離限制
+ equipR mask
+ activate R
+
+//大鎚
+?(item.GetCooldown("hammer") <= 0 & 
+^foe.distance <= 18) |
+^(item.right = heavy & item.right.state = 2) //攻擊中, 可能會把普通攻擊誤判為技能使用
+ equip heavy hammer
+ activate R
+ return
+
+//骷髏手
+?item.GetCooldown("skeleton_arm")<=0 &
+^buffs.string="pick_pocket" &
+^foe.distance > 3 & foe.distance <= 8
+ equip skeleton_arm
+ activate R
+
+//火護符
+?summon.GetId() ! "cinderwisp" &
+^(item.GetCooldown("fire_talisman") <= 0 |
+^item.right=fire_talisman&item.right.state=2) //技能使用中
+ equipL trisk //隨便塞點東西
+ equipR fire_talisman
+ activate R
+ return
+
+//火精靈技能
+?summon.GetId() = "cinderwisp" &
+^item.GetCooldown("cinderwisp") <= 0 &
+^summon.GetVar("ignition") > 0 //根據buff最大層數和需要自行調整
+ activate cinderwisp
+
+//乙太護符
+?summon.GetId() ! "voidweaver" &
+^(item.GetCooldown("aether_talisman") <= 0 |
+^item.right=aether_talisman&item.right.state=2) //技能使用中
+ equipL trisk //隨便塞點東西
+ equipR aether_talisman
+ activate R
+ return
+
+//乙太精靈技能
+?item.GetCooldown("voidweaver") <= 0 &
+^summon.GetId() = "voidweaver"
+//^ & foe.distance <= 6 //根據需要自行添加
+ activate voidweaver
+
+//萬用取消後搖
+?item.left.state = 3
+ equipL sword *0
+?item.right.state = 3
+ equipR shield *0
+
+equipL @item.left@ //根據需要自行刪除
+equipR @item.right@ //根據需要自行刪除

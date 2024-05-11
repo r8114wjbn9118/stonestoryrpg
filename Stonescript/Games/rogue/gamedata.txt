@@ -1,0 +1,78 @@
+//0 : name
+//1 : hp
+//2 : atk
+//3 : def
+//4 : elemental
+//5 : map art
+//6 : description
+//7 : art
+var enemy = [[],
+^["", 3, 1, 0, null, "E", "", ""]
+]
+
+//0 : name
+//1 : type(weapon, armor, shield, accessories, potion)
+//2 : hp
+//3 : atk
+//4 : def
+//5 : buff
+//6 : map art
+//7 : description
+//8 : art
+var weapon = [[],
+^["sword", "weapon", 0, 1, 0, null, ""],
+^["fire sword", "weapon", 0, 2, 0, null, ""], //atk plus against fire weakness
+^["ice sword", "weapon", 0, 2, 0, null, ""],//atk plus against ice weakness, foe atk slower
+^["poison sword", "weapon", 0, 2, 0, null, ""],//atk plus against poison weakness, foe atk lower
+^["hammer", "weapon", 0, 2, 0, null, ""], //stun randomly, atk plus against armor?
+^["shield", "weapon", 0, 0, 1, null, ""],
+^["wand", "weapon", 0, 1, 0, null, ""],//atk plus against magic weakness
+^["crossbow", "weapon", 0, 1, 0, null, ""], //immune to first atk
+^["fire talisman", "weapon", 0, 0, 0, null, ""], //def plus agaist fire foes
+^["ice talisman", "weapon", 0, 0, 0, null, ""],
+^["poison talisman", "weapon", 0, 0, 0, null, ""],
+^["shoes", "weapon", 0, 0, 0, null, ""] //randomly evade foe's atk
+]
+
+var potion = [[],
+^["healing potion", "potion", 9999, 0, 0, null, "P", "", ascii
+#)(
+(~≈)
+#‾‾
+asciiend],
+^["strength potion", "potion", 0, 5, 0, null, "P", "", ascii
+#)(
+(oo)
+#‾‾
+asciiend],
+^["defensive potion", "potion", 0, 0, 5, null, "P", "", ascii
+#)(
+(~o)
+#‾‾
+asciiend],
+^["lightning potion", "potion", 0, 0, 0, null, "P", "", ascii
+#)(
+(.:)
+#‾‾
+asciiend], //閃電buff 攻擊全埸敵人
+^["vampiric potion", "potion", 0, 0, 0, null, "P", "", ascii
+#)(
+(~:)
+#‾‾
+asciiend], //next 3 foes hp plus atk
+^["cleansing potion", "potion", 0, 0, 0, null, "P", "", ascii
+#)(
+(~/)
+#‾‾
+asciiend] //clean all debuffs
+]
+
+//0 : name
+//1 : type(1, 0, -1)
+//2 : hp
+//3 : atk
+//4 : def
+var buff = [[],
+^["poison", -1, 0, 2, 0],
+^["vigor", 1, 10, 0, 0]
+]

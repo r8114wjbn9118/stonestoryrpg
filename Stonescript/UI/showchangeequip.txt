@@ -1,0 +1,62 @@
+var length = 18
+var y = screen.h - length - 1
+
+var ll = []
+var ls = item.left.state
+var lt = item.left.time
+var ln = getlocalname(item.left)
+
+var rl = []
+var rs = item.right.state
+var rt = item.right.time
+var rn = getlocalname(item.right)
+
+func main()
+	check()
+	update()
+	show()
+
+func check()
+	?ls ! item.left.state | rs ! item.right.state | item.left ! ln | item.right ! rn
+		var s
+		s = ls + " " + lt
+		?item.left ! ln
+			s = s + " " + ln
+		ll.Add(s)
+		?ll.Count() >= length
+			ll.RemoveAt(0)
+
+		s = rs + " " + rt
+		?item.right ! rn
+			s = s + " " + rn
+		rl.Add(s)
+		?rl.Count() >= length
+			rl.RemoveAt(0)
+
+func update()
+	ls = item.left.state
+	lt = item.left.time
+	ln = getlocalname(item.left)
+
+	rs = item.right.state
+	rt = item.right.time
+	rn = getlocalname(item.right)
+
+func show()
+	?ll.Count()
+		for i = ll.Count() - 1..0
+			>`0,@y+ll.Count()-i@,@ll[i]@
+	>`0,@y@,@ls@ @lt@ @ln@
+
+	?rl.Count()
+		for i = rl.Count() - 1..0
+			>`15,@y+rl.Count()-i@,@rl[i]@
+	>`15,@y@,@rs@ @rt@ @rn@
+
+func getlocalname(s)
+	?string.Size(s)
+		return string.Sub(s, 0, string.indexOf(s, " "))
+	:
+		return ""
+
+main()

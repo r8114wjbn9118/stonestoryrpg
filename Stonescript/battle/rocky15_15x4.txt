@@ -10,13 +10,13 @@
 乙太護符
 */
 
-//毒屬性: dP長杖*10+15
+//毒屬性: 攻速 dP 長杖 *10 +15
 var poison = "poison staff dP *10 +15"
-//體力屬性: dL短劍*10+15
+//體力屬性: 攻速 dL 短劍 *10 +15
 var vigor = "vigor sword dL *10 +15"
-//火屬性: D短劍*10+15
+//火屬性: 攻速 D 短劍 *10 +15
 var fire = "fire sword D *10 +15"
-//冰屬性: dI長杖*10+15
+//冰屬性: 攻速 dI 長杖 *10 +15
 var ice = "ice staff dI *10 +15"
 
 //回甲最快的盾
@@ -25,15 +25,17 @@ var speed_shield = "compound *10"
 var speed_shield_value = 14
 //上限最高的盾
 var value_shield = "compound *10"
-func restoreArmor()
+//疊盾
+func restoreArmor(L)
  var speed_maxarmor = speed_shield_value
- ?item.left = quest
+ ?L = "quest"
   speed_maxarmor = speed_maxarmor + 2
  ?armor >= speed_maxarmor
-  equipR @value_shield@
+  selectEquip(L, value_shield)
  :
-  equipR @speed_shield@
+  selectEquip(L, speed_shield)
 
+//boss攻擊循環
 var attackLoop = -1
 
 //萬用取消後搖
@@ -42,10 +44,37 @@ var attackLoop = -1
 ?item.right.state = 3
  equipR shield
 
+//更換裝備
+//防止白痴一樣的月石換裝卡手
+//因為是在最後才更換,所以技能需要在activate前再寫一次原來的equip
+//另外因為是在最後才更換,只要有寫一句就會把所有預設的equip覆蓋
+//還有因為是在最後才更換,上面的取消後搖不用改
+//(重要的事要重複三次)
+var eL = ""
+var eR = ""
+func selectEquipL(e) //左手,取代equipL
+ eL = e
+func selectEquipR(e) //右手,取代equipR
+ eR = e
+func selectEquip(L, R) //左右手,把兩行寫成一行
+ selectEquipL(L)
+ selectEquipR(R)
+func selectEquipT(e) //雙手,取代equip
+ selectEquip(e, e)
+func changeEquip()
+ ?eL = eR & eL
+  equip @eL@
+ :
+  ?eL
+   equipL @eL@
+  ?eR
+   equipR @eR@
+
 //木棒衝刺
 func quarterstaffSkill()
  ?item.GetCooldown("quarterstaff") <= 0 &
  ^item.CanActivate()
+  selectEquipT("quarterstaff")
   equip quarterstaff
   activate R
   return true
@@ -56,41 +85,40 @@ func dashSkill()
    return true
  ?foe.distance > 10
    ?item.GetCooldown("dash") <= 0
-    equipL trisk
-    equipR dash
+    selectEquip("trisk","dash")
     return true
    :?item.GetCooldown("bash") <= 0
-    equipL trisk
-    equipR bash
+    selectEquip("trisk","bash")
     return true
   
 
 //躲避
 func mindSkill()
  ?item.GetCooldown("mind") <= 0
-  equipL quest
-  equipR mind
+  selectEquip("quest","mind")
   return true
 
 //火護符
 func fire_talismanSkill()
  ?summon.GetId() ! "cinderwisp" &
  ^(item.GetCooldown("fire_talisman") <= 0 |
- ^item.right=fire_talisman&item.right.state=2)
+ ^item.right="fire_talisman" &
+ ^item.right.state=2)
+  selectEquip("trisk","fire_talisman")
   equipL trisk
   equipR fire_talisman
   activate R
   return true
 //火精靈技能
-?summon.GetId() = "cinderwisp" &
-^item.GetCooldown("cinderwisp") <= 0 &
-^summon.GetVar("ignition") = 10
- activate cinderwisp
+func cinderwispSkill()
+ ?summon.GetId() = "cinderwisp" &
+ ^item.GetCooldown("cinderwisp") <= 0 &
+ ^summon.GetVar("ignition") = 10
+  activate cinderwisp
 
 
 //冰debuff數量
 var iceCount = 0
-getIceCount()
 func getIceCount()
  ?foe.debuffs.count
   var index = string.IndexOf(
@@ -112,7 +140,7 @@ var poisonEffect
 poisonEffect=(
 ^foe.debuffs.string="debuff_damage")
 func needPoison(timer)
- return !poisonEffect & timing(32, timer)
+ return !poisonEffect & timing(32, timer - 12)
 
 
 //應對時機
@@ -120,87 +148,65 @@ func timing(s, t)
  return foe.state=s & foe.time>=t+iceEffect()
 
 
-?totaltime <= 1
- brew tar + stone //回甲藥
- //brew tar //回血藥
 
- //第一埸開局會直接滿甲
- equipL quest
- equipR @value_shield@
- return
-
-//吸取掉落物
-?pickup.distance <= 5
- equipL trisk
- equipR star
-
-//跑路
-:?foe.distance > 23
- ?quarterstaffSkill()
-  return
-
- ?!summon.GetId()
-  ?fire_talismanSkill()
-   return
-
- equipL trisk
- restoreArmor()
-
-//動畫
-:?!ai.enabled
- //重置循環計算
- attackLoop = -1
-
- equipL quest
- restoreArmor()
-
-////第1階段////
-:?foe = phase1
+////小boss////
+func boss_0()
  ?foe.distance <= 10
-  equipL @fire@
-  equipR @vigor@
+  ?needIce()
+   selectEquipT(ice)
+  :?needPoison(14)
+   selectEquipT(poison)
+  :
+   selectEquip(fire,vigor)
  :
   dashSkill()
 
+////第1階段////
+func boss_1()
  //上debuff
  ?needIce()
-  equip @ice@
- :?needPoison(18)
-  equip @poison@
+  selectEquipT(ice)
+ :?needPoison(24)
+  selectEquipT(poison)
+
+ //輸出/回血
+ :?foe.distance <= 10
+  selectEquip(fire,vigor)
+ :
+  dashSkill()
 
 ////第2階段////
-:?foe = phase2
+func boss_2()
  ?foe.distance <= 10
   ?foe = "poison"
-   equip @ice@
+   selectEquipT(ice)
   :?foe = "vigor"
-   equip @poison@
+   selectEquipT(poison)
   //:?foe = "aether"
   //:?foe = "fire"
   //:?foe = "ice"
   :
-   equipL @fire@
-   equipR @vigor@
+   selectEquip(fire,vigor)
 
-  //在攻擊前截斷上debuff的裝備, 以免自家吃debuff
+  //在被攻擊前截斷上debuff的裝備, 以免自家吃debuff
   ?timing(32,57)
    ?foe = "fire" //沒有乙太屬性的裝備, 先用護符代替
-    equipL aether_talisman
+    selectEquipL("aether_talisman")
    return
 
   //如果沒有免疫就上debuff
   ?foe.buffs.string ! "buff_protection"
    ?needIce()
-    equip @ice@
+    selectEquipT(ice)
    //體力屬性是回血+免疫debuff, 不需要上毒
-   :?needPoison(30) & foe ! "vigor"
-    equip @poison@
+   :?needPoison(59) & foe ! "vigor"
+    selectEquipT(poison)
 
  :
   dashSkill()
 
 ////第3階段////
-:?foe = phase3
+func boss_3()
  //攻擊循環+1 (0~5)
  ?(foe.state=32 | foe.state=115) & !foe.time
   attackLoop = (attackLoop + 1) % 6
@@ -214,30 +220,30 @@ func timing(s, t)
  ?attackLoop = 2 & timing(32,12)
   //大鎚
   ?item.GetCooldown("hammer") <= 0 |
-  ^(item.right=heavy&item.right.state=2)
-   equip heavy hammer
+  ^(item.right="heavy"&item.right.state=2)
+   selectEquipT("heavy")
+   equip heavy
    activate R
    return
 
  //先用不常用的屬性, 以應對第一次開盾的屬性免疫
  ?!foe.buffs.count
-  equip @poison@
+  selectEquipT(poison)
  :?foe.distance <= 10
   //如果有攻擊型的藥水就在第一次開盾後使用
   ?item.potion = "berserk" |
   ^item.potion = "lucky"
    activate potion
 
-  equipL @fire@
-  equipR @vigor@
+  selectEquip(fire,vigor)
  :
   dashSkill()
 
  ?needIce() //上冰
-  equip @ice@
+  selectEquipT(ice)
  //上毒, 但跳過可以躲避的技能
- :?needPoison(43) & attackLoop!2&attackLoop!5
-  equip @poison@
+ :?needPoison(49) & attackLoop!2&attackLoop!5
+  selectEquipT(poison)
 
  //如果有回復藥就在結束回滿血, 以防萬一
  ?(item.potion = "healing" & hp < maxhp &
@@ -248,15 +254,57 @@ func timing(s, t)
  ^(foe.hp + foe.armor) < 15000)
   activate potion
 
-////小boss////
-:
- ?foe.distance <= 10
-  ?needIce()
-   equip @ice@
-  :?needPoison(8)
-    equip @poison@
-  :
-   equipL @fire@
-   equipR @vigor@
+
+func main()
+ getIceCount()
+ cinderwispSkill()
+
+ ?totaltime <= 1
+  brew tar + stone //回甲藥
+  //brew tar //回血藥
+
+  //第一埸開局會直接滿甲
+  selectEquip("quest",value_shield)
+  return
+
+ //吸取掉落物
+ ?pickup.distance <= 5
+  selectEquip("trisk","star")
+
+ //跑路
+ :?foe.distance > 23
+  ?quarterstaffSkill()
+   return
+
+  ?!summon.GetId()
+   ?fire_talismanSkill()
+    return
+
+  restoreArmor("trisk")
+
+ //動畫
+ :?!ai.enabled
+  //重置循環計算
+  attackLoop = -1
+
+  restoreArmor("quest")
+
+ ////第1階段////
+ :?foe = phase1
+  boss_1()
+
+ ////第2階段////
+ :?foe = phase2
+  boss_2()
+
+ ////第3階段////
+ :?foe = phase3
+  boss_3()
+
+ ////小boss////
  :
-  dashSkill()
+  boss_0()
+
+ //更換裝備
+ changeEquip()
+main()

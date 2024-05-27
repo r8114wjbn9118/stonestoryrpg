@@ -1,4 +1,4 @@
-//如何使用12件+15裝備通關15高原?
+//如何使用9件+15和2件+21裝備通關15高原?
 
 /* 除+15以外的必要裝備
 鐵頭木棒
@@ -7,9 +7,7 @@
 複合盾(最好滿星或以上)
 火護符
 */
-//破甲: 鎧甲疲勞 大鎚 *10 +15
-//無屬性: 攻擊 連射弩 *10 +15
-
+//破甲: 鎧甲疲勞 大鎚 *10+15
 
 //毒屬性:
 //攻速 dP 長杖 *10 +15 
@@ -23,8 +21,8 @@ var vigor2 = "vigor sword dL *10 +15 -shiny"
 var aether1 = "aether sword D *10 +15 shiny"
 var aether2 = "aether sword D *10 +15 -shiny"
 //火屬性: 攻速 D 短劍 *10 +13~15 *2
-var fire1 = "fire sword D *10 +15 shiny"
-var fire2 = "fire sword D *10 +15 -shiny"
+var fire1 = "fire sword D *10 +21 shiny"
+var fire2 = "fire sword D *10 +21 -shiny"
 //冰屬性:
 //攻速 dI 長杖 *10 +15
 var ice = "ice staff dI *10 +15"
@@ -152,7 +150,7 @@ poisonEffect=(
 ^foe.debuffs.string="debuff_damage")
 //這個timer是boss的攻擊時間,不是角色的攻擊時間
 func needPoison(timer)
- return !poisonEffect & timing(32, timer - 12)
+ return !poisonEffect & timing(32, timer-12)
 
 var moonTimer = -1
 func moondialing_21_21(L, R)
@@ -178,7 +176,7 @@ func boss_0()
   :?needPoison(14)
    selectEquipT(poison)
   :
-   selectEquipT("repeating")
+   moondialing_21_21(fire1, fire2)
  :
   dashSkill()
 
@@ -194,7 +192,7 @@ func boss_1()
   ?hp < maxhp * 3 / 4
    selectEquip(vigor1,vigor2)
   :
-   selectEquip(fire1, fire2)
+   moondialing_21_21(fire1, fire2)
  :
   dashSkill()
 
@@ -210,7 +208,7 @@ func boss_2()
   :?foe = "fire"
    selectEquip(aether1,aether2)
   :?foe = "ice"
-   selectEquip(fire1, fire2)
+   moondialing_21_21(fire1, fire2)
 
   //在攻擊前截斷上debuff的裝備, 以免自家吃debuff
   ?timing(32,57)
@@ -261,7 +259,7 @@ func boss_3()
   :?!foe.buffs.count
    selectEquip(aether1,aether2)
   :
-   selectEquip(fire1, fire2)
+   moondialing_21_21(fire1, fire2)
 
   ?(buffs.string = "berserk" |
   ^buffs.string = "lucky")

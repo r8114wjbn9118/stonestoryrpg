@@ -1,18 +1,16 @@
 /*
 SSRPG Version: 3.68.2
-Version: 0.9
+Version: 0.9.1
 Author: xx
-Assistance: JianShang36, Okamiroy
+Assistance: JianShang36, Okamiroy, Citriondragon
 
 Reference to Chrome Dino and Ascension(Legend quest)
-
-
 */
 /* 
 Instruction:
 
 Enter the following code in deadwood waterfall
-//	import Games/run
+//	import Games/StoneasaurGame
 
 Steam: Press the C key to operate
 Phone: Click on the screen to operate
@@ -41,6 +39,8 @@ NOTE: In-game text is not yet complete
 */
 
 
+
+disable banner
 
 var messageList = []
 
@@ -169,8 +169,8 @@ func main()
 			delta.x = delta.x - speed
 
 		updateCharJump()
+
 	:?state = 1 // title
-		
 
 		?updateFade()
 			return
@@ -180,28 +180,35 @@ func main()
 				return
 		?gameTime // restart delay
 			gameTime--
-		:
-			updateCharJump()
-			?char.playing
-				state = 2
+			return
+
+		updateCharJump()
+		?char.playing
+			state = 2
+			return
+
+		showHint()
+
 	:?state = 3 // gameover
+		>`@screen.w/2-5@,@screen.h/2-2@,GAME  OVER
 		?gameTime // restart delay
 			gameTime--
-		:?key = primaryBegin
+			return
+		?checkInput()
 			goto()
 			gameTime = 15
+
+		showHint()
+
 	:?state = 0 // initialize
 		init()
 
-		//test story
-		//state = -2
-		//return
-
-		?!storage.Get("watch", 0)
-			state = -1
-		:
+		?storage.Get("watch", 0)
 			fadeIn()
 			reset()
+		:
+			state = -1
+
 	:?state < 0
 		state = -watch(-state)
 		?state >= 0
@@ -406,7 +413,6 @@ func createScoreWindow()
 
 	text = string.Format("{0}", score)
 	scoreValueText = ui.AddText(text)
-	//scoreValueText.x = 1
 	scoreValueText.w = string.Size(text)
 	scoreValueText.h = 1
 	scoreValueText.anchor = top_right
@@ -457,6 +463,7 @@ func createJam()
 		jamText.y = 2
 		jamText.w = 21
 		jamText.h = 9
+		jamText.align = center
 		jamText.anchor = top_center
 		jamText.dock = top_center
 		jamText.color = "#00b300"
@@ -466,10 +473,10 @@ func createJam()
 	?!jamNode
 		jamNode = ui.AddText()
 		jamNode.text = messageList[0][3]
-		jamNode.h = 3
-		jamNode.w = 48
-		jamNode.x = 2
 		jamNode.y = -1
+		jamNode.w = maxMessageWidth - 4
+		jamNode.h = 3
+		jamNode.align = center
 		jamNode.anchor = bottom_center
 		jamNode.dock = bottom_center
 		jamNode.visible = false
@@ -496,9 +503,11 @@ func createJamShiny()
 
 func fadeIn()
 	fadeTimer = 15
+	updateFade()
 
 func fadeOut()
 	fadeTimer = -15
+	updateFade()
 
 func updateFade()
 	?fadeTimer
@@ -532,41 +541,40 @@ func clearJam()
 		jamNode.visible = false
 
 func updateMessage()
-	checkInput() // 預防輸入滯留
-
 	var d = 10
 	?messageWindow.visible
 		?messageText.text
-			?messageWindow.w < maxMessageWidth | messageWindow.h < maxMessageHeight
+			?messageWindow.w = maxMessageWidth & messageWindow.h = maxMessageHeight
+				?checkInput()
+					messageText.text = ""
+					clearJam()
+			:
 				?messageWindow.w < maxMessageWidth
-					messageWindow.w = messageWindow.w + maxMessageWidth / d
-					messageWindow.w++
-					?messageWindow.w >= maxMessageWidth
-						messageWindow.w = maxMessageWidth
+					messageWindow.w = messageWindow.w + maxMessageWidth / d + 1
+				?messageWindow.w > maxMessageWidth
+					messageWindow.w = maxMessageWidth
+
 				?messageWindow.h < maxMessageHeight
-					messageWindow.h = messageWindow.h + maxMessageHeight / d
-					messageWindow.h++
-					?messageWindow.h >= maxMessageHeight
-						messageWindow.h = maxMessageHeight
+					messageWindow.h = messageWindow.h + maxMessageHeight / d + 1
+				?messageWindow.h > maxMessageHeight
+					messageWindow.h = maxMessageHeight
+
 				messageText.w = messageWindow.w - 4
 				messageText.h = messageWindow.h - 2
-			:?checkInput()
-				messageText.text = ""
-				clearJam()
 		:
-			?messageWindow.w > 0 | messageWindow.h > 0
-				?messageWindow.w > 0
-					messageWindow.w = messageWindow.w - maxMessageWidth / d
-					messageWindow.w--
-				:
-					messageWindow.w = 0
-				?messageWindow.h > 0
-					messageWindow.h = messageWindow.h - maxMessageHeight / d
-					messageWindow.h--
-				:
-					messageWindow.h = 0
-			:
+			?messageWindow.w = 0 & messageWindow.h = 0
 				messageWindow.visible = false
+			:
+				?messageWindow.w > 0
+					messageWindow.w = messageWindow.w - maxMessageWidth / d - 1
+				?messageWindow.w < 0
+					messageWindow.w = 0
+
+				?messageWindow.h > 0
+					messageWindow.h = messageWindow.h - maxMessageHeight / d - 1
+				?messageWindow.h < 0
+					messageWindow.h = 0
+				
 	return messageWindow.visible
 
 func updateMessageList(messageListIndex)
@@ -662,7 +670,6 @@ func updateCharJump()
 		*/
 		?!jumpDurationTimer
 			char.Play()
-	// 如果在跳躍時按下但不接收會重複跳躍, 因此這裏必須接收輸入
 	?checkInput() & !jumpDurationTimer
 		char.Stop()
 		char.frame = 0
@@ -722,13 +729,15 @@ func saveHighscore()
 	highscoreValueText.w = string.size(text)
 
 func goto()
-	?score >= 4500
-		?getWatch(3) & !getWatch(4)
-			state = -4
-			return
-		:?getWatch(1) & !getWatch(2)
-			state = -2
-			return
+	?speed >= 2
+		?getWatch(3)
+			?!getWatch(4)
+				state = -4
+				return
+		:?getWatch(1)
+			?!getWatch(2)
+				state = -2
+				return
 	reset()
 
 
@@ -759,6 +768,7 @@ func checkKey()
 func watch(i)
 	var s = i % 100
 	var t = math.FloorToInt(i / 100)
+
 	?s = 1
 		t = watch_badStart(t)
 	:?s = 2
@@ -767,6 +777,7 @@ func watch(i)
 		t = watch_goodStart(t)
 	:?s = 4
 		t = watch_goodEnd(t)
+
 	?t < 0
 		return -1
 	:
@@ -779,6 +790,9 @@ func setCharState(anim, pivotX, pivotY, duration, loop)
 	char.duration = duration
 	char.loop = loop
 	char.frame = 0
+
+func resetCharState()
+	setCharState(moveAnim, 0, 0, 20, true)
 
 
 var badAnim = ascii
@@ -828,7 +842,7 @@ func watch_badStart(i)
 		?!updateMessageList(1)
 			return i + 1
 	:?i = 5
-		setCharState(moveAnim, 0, 0, 20, true)
+		resetCharState()
 		setWatch(1)
 		return -1
 	return i
@@ -957,7 +971,7 @@ func watch_goodStart(i)
 		?!updateMessageList(3)
 			return i + 1
 	:?i = 6
-		setCharState(moveAnim, 0, 0, 20, true)
+		resetCharState()
 		setWatch(3)
 		return -1
 	return i
@@ -989,14 +1003,14 @@ func watch_goodEnd(i)
 
 func setWatch(i)
 	?!getWatch(i)
-		storage.Incr("watch", math.FloorToInt(math.Pow(2, i)))
+		storage.Incr("watch", math.Pow(2, i))
 
 func getWatch(i)
 	var w = storage.Get("watch", 0)
 	?w
-		return math.FloorToInt(((w % math.Pow(2, i + 1) - w % math.Pow(2, i)) / math.Pow(2, i))) = 1
-	:
-		return false
+		var t = math.Pow(2, i)
+		return w % (t * 2) - w % t = t
+	return false
 
 func getLanguage()
 	?te.language = "EN"
@@ -1031,28 +1045,26 @@ func getLanguage_EN()
 		"score",
 		"Hscore",
 		"click",
-		"A green gem, like sparkling fragments of stars,\n contains the power to fight against darkness.\n(input ↑←↓→ at the Stone Dungeon's title to use)"
+		"A green gem, gentle yet hard,\nwith rare attraction.\n(input ↑←↓→ at the Stone Dungeon's title to use)"
 	])
+
+	for i = 0..3
+		messageList.Add([])
+	return
+
 	// bad start
-	messageList.Add([
-		"Story is being written\n\nplease wait for the next update"
-	])
+	messageList.Add([])
 	// bad end
-	messageList.Add([
-		"Story is being written\n\nplease wait for the next update"
-	])
+	messageList.Add([])
 	// good start
-	messageList.Add([
-		"Story is being written\n\nplease wait for the next update"
-	])
+	messageList.Add([])
 	// good end
-	messageList.Add([
-		"Story is being written\n\nplease wait for the next update"
-	])
+	messageList.Add([])
 
 func getLanguage_PTBR()
 	getLanguage_EN()
 	return
+
 	messageList.Clear()
 	messageList.Add([])
 	messageList.Add([])
@@ -1067,29 +1079,28 @@ func getLanguage_ZHCN()
 		"分数",
 		"最高分",
 		"点击",
-		"一颗绿宝石，如同闪耀的星星碎片，蕴含着对抗黑暗的力量。\n(在Stone Dungeon标题输入↑←↓→后开始游戏使用)"
+		"一块绿宝石，温柔而坚硬，具有罕见的吸引力。\n(在Stone Dungeon标题输入↑←↓→后开始游戏即可使用)"
 	])
+
+	for i = 0..3
+		messageList.Add([])
+	return
+
 	// bad start
 	messageList.Add([
-		"故事编写中，请等待下一版本的更新"
-		/*
 		"\"好痛...\"\n冷风钻进你的伤口内，刺痛的感觉让你精神一振。",
 		"你站起来环顾四周，以往遥不可及的卫城正在你的眼前。\n看来你坚定的信念的确打动了琉刻。\n只是... 你似乎与卫城的大门还有一段距离。",
 		"遍地都是宝箱和纪念无名尸体的墓碑，也许同样是从[color=#00ff00]静溪[/color]运送上来的?\n但己经没空思考这种事情了，你不知道自己受伤的身体能不能支撑到进入卫城。",
 		"但即使如此，你依然一步步的往前，向着美好的人生迈进。"
-		*/
 	])
 	// bad end
 	messageList.Add([
-		"故事编写中，请等待下一版本的更新"
 	])
 	// good start
 	messageList.Add([
-		"故事编写中，请等待下一版本的更新"
 	])
 	// good end
 	messageList.Add([
-		"故事编写中，请等待下一版本的更新"
 	])
 
 func getLanguage_ZHTW()
@@ -1099,39 +1110,37 @@ func getLanguage_ZHTW()
 		"分數",
 		"最高分",
 		"點擊",
-		"一顆綠寶石，如同閃耀的星星碎片，蘊含著對抗黑暗的力量。\n(在Stone Dungeon標題輸入↑←↓→後開始遊戲使用)"])
+		"一顆綠寶石，溫柔而堅硬，具有罕見的吸引力。\n(在Stone Dungeon標題輸入↑←↓→後開始遊戲即可使用)"])
+
+	for i = 0..3
+		messageList.Add([])
+	return
+
 	// bad start
 	messageList.Add([
-		"故事編寫中, 請等待下一版本的更新"
-		/*
 		"\"好痛...\"\n冷風鑽進你的傷口內，刺痛的感覺讓你精神一振。",
 		"你站起來環顧四周，以往遙不可及的衛城正在你的眼前。\n看來你堅定的信念的確打動了琉刻。\n只是... 你似乎與衛城的大門還有一段距離。",
 		"遍地都是寶箱和紀念無名屍體的墓碑，也許同樣是從[color=#00ff00]靜默溪流[/color]運送上來的?\n但己經沒空思考這種事情了，你不知道自己受傷的身軀能不能支撐到進入衛城。",
 		"但即使如此，你仍然一步步的往前，向着美好的人生邁進。"
-		*/
 	])
 	// bad end
 	messageList.Add([
-		"故事編寫中, 請等待下一版本的更新"
-		/*
 		"只要能夠進去...\n我就是高貴的衛... 城......",
 		"經過漫長的道路，全身已經疲憊無力的你終於站立在高聳的大門前。\n。",
 		"",
 		""
-		*/
 	])
 	// good start
 	messageList.Add([
-		"故事編寫中, 請等待下一版本的更新"
 	])
 	// good end
 	messageList.Add([
-		"故事編寫中, 請等待下一版本的更新"
 	])
 
 func getLanguage_FR()
 	getLanguage_EN()
 	return
+
 	messageList.Clear()
 	messageList.Add([])
 	messageList.Add([])
@@ -1142,6 +1151,7 @@ func getLanguage_FR()
 func getLanguage_DE()
 	getLanguage_EN()
 	return
+
 	messageList.Clear()
 	messageList.Add([])
 	messageList.Add([])
@@ -1152,6 +1162,7 @@ func getLanguage_DE()
 func getLanguage_RU()
 	getLanguage_EN()
 	return
+
 	messageList.Clear()
 	messageList.Add([])
 	messageList.Add([])
@@ -1162,6 +1173,7 @@ func getLanguage_RU()
 func getLanguage_ESLA()
 	getLanguage_EN()
 	return
+
 	messageList.Clear()
 	messageList.Add([])
 	messageList.Add([])
@@ -1172,6 +1184,7 @@ func getLanguage_ESLA()
 func getLanguage_ESEU()
 	getLanguage_EN()
 	return
+
 	messageList.Clear()
 	messageList.Add([])
 	messageList.Add([])
@@ -1182,6 +1195,7 @@ func getLanguage_ESEU()
 func getLanguage_JP()
 	getLanguage_EN()
 	return
+
 	messageList.Clear()
 	messageList.Add([])
 	messageList.Add([])
@@ -1192,6 +1206,7 @@ func getLanguage_JP()
 func getLanguage_KR()
 	getLanguage_EN()
 	return
+
 	messageList.Clear()
 	messageList.Add([])
 	messageList.Add([])
@@ -1202,6 +1217,7 @@ func getLanguage_KR()
 func getLanguage_TK()
 	getLanguage_EN()
 	return
+
 	messageList.Clear()
 	messageList.Add([])
 	messageList.Add([])
@@ -1277,8 +1293,16 @@ var jamShiny = ascii
 
 asciiend
 
+func showHint()
+	?totaltime % 60 < 30
+		return
+	?sys.isPC
+		>`@screen.w/2-6@,@screen.h/2+2@,Press  C key
+	:?sys.isMobile
+		>`@screen.w/2-6@,@screen.h/2+2@,Click Screen
+
 func showdata()
-	>`0,0,@state@ @score@ @highscore@ @gameDelay@ @speed@ @fadeTimer@ @messageWindow.visible@ @messageWindow.w@ @messageWindow.h@ @messageIndex@ @messageText.text@
+	>`0,0,@state@ @score@ @highscore@ @gameDelay@ @speed@ @fadeTimer@ @storage.Get("watch", 0)@
 
 	?char
 		>`0,1,@char.x@ @char.y@ @char.pivotY@ @char.w@ @char.h@
@@ -1309,5 +1333,6 @@ func removeWatch()
 func removeAll()
 	removeHighScore()
 	removeWatch()
+	loc.Leave()
 
-removeAll()
+//removeAll()

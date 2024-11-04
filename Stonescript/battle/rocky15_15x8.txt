@@ -1,4 +1,71 @@
-//如何使用8件+15裝備通關15高原?
+/*
+SSRPG version: 4.3
+date: 2024/11/01
+*/
+/* 簡介
+ 如何使用8件+15裝備通關15高原?
+
+ 本模板的理論速度平均約3分半
+
+ 內部新增了大量func以及會對預設代碼造成干擾的機制
+ 如要修改代碼請先閱讀並理解運行方式, 否則有可能無法運行
+
+ 需求+15装備
+  毒 dP 長杖(附魔攻速)
+  體力 dL 短劍(附魔攻速) x2
+  乙太 D 短劍(附魔攻速)
+  冰 dI 長杖(附魔攻速)
+  火 D 短劍(附魔攻速) x2
+  大鎚(附魔鎧甲疲勞)
+  
+ 除+15以外的必要裝備
+  鐵頭木棒
+  前衝之盾
+  打擊之盾
+  複合盾(最好滿星或以上)
+  火護符
+*/
+
+/* 主要用法
+ 在 run() 中加入未遇怪時的行動
+ 在 attack() 中加入對小怪時的行動
+
+ 在 boss_0() 中加入對小boss時的行動
+ (某些生怪類小boss可能會檢測不到,請自行解決此問題)
+ 
+ 在 boss_ + 階段() 中加入對每個階段的boss時的行動
+
+
+ 由於疊藥時有裝備的限制
+ 因此會額外使用特定的stackPotion行動func
+ 沒有開啟疊藥時不需要理會
+*/
+
+/* 技能用法
+ //?hammerSkill()
+ //	return
+ 當技能正在使用時
+ 將會執行retrun跳過下方的內容
+ 避免裝備被更改覆蓋而導致技能被打斷
+
+ //?foe.count > 5
+ //	?BladeSkill()
+ //		return
+ 如有額外的需求, 例如墮神劍的怪物數量等
+ 需要先檢測是否達到條件
+*/
+
+/* 裝備用法
+ 使用 'selectEquipL(裝備)' 取代 'equipL 裝備'
+ 使用 'selectEquipR(裝備)' 取代 'equipR 裝備'
+ 使用 'selectEquipT(裝備)' 取代 'equip 裝備'
+
+
+ selectEquip(左手裝備, 右手裝備)
+ 雙手裝備的簡短寫法, 等同於
+ selectEquipL(左手裝備)
+ selectEquipR(右手裝備)
+*/
 
 ///////////////////    裝備    ///////////////////
 /* 除+15以外的必要裝備
@@ -8,7 +75,6 @@
 複合盾(最好滿星或以上)
 火護符
 */
-//破甲: 鎧甲疲勞 大鎚 *10 +15
 
 //毒屬性: 攻速 dP 長杖 *10 +15
 var poison = "poison staff dP *10"
@@ -23,6 +89,12 @@ var fire2 = "fire sword D *10 -shiny"
 //冰屬性: 攻速 dI 長杖 *10 +15
 var ice = "ice staff dI *10"
 
+//技能用大鎚(附魔鎧甲疲勞) *10 +15
+var heavy = "heavy hammer *10"
+
+//技能用月牙(並沒有在使用)
+var bardiche = "bardiche"
+
 //回甲最快的盾
 var speed_shield = "compound *10"
 //回甲最快的盾的上限
@@ -30,23 +102,14 @@ var speed_shield_value = 14
 //上限最高的盾
 var value_shield = "compound *10"
 
-//疊盾
-//放在左手的裝備主要有
-//三曲腿: 移動加速
-//任務石: 增加最大盾量
-func restoreArmor(L)
- var speed_maxarmor = speed_shield_value
- ?L = "quest"
-  speed_maxarmor = speed_maxarmor + 2
- ?armor >= speed_maxarmor
-  selectEquip(L, value_shield)
- :
-  selectEquip(L, speed_shield)
+//五屬A盾(並沒有在使用)
+var poison_shield_A = "poison shield A"
+var vigor_shield_A = "vigor shield A"
+var aether_shield_A = "aether shield A"
+var fire_shield_A = "fire shield A"
+var ice_shield_A = "ice shield A"
 
-
-
-//boss攻擊循環
-var attackLoop = -1
+///////////////////   更換裝備   ///////////////////
 
 //萬用取消後搖
 ?item.left.state = 3
@@ -54,17 +117,29 @@ var attackLoop = -1
 ?item.right.state = 3
  equipR shield
 
+/* 自制更換裝備指令
 
-///////////////////   更換裝備   ///////////////////
-//防止白痴一樣的月石換裝卡手
-//因為是在最後才更換,所以技能需要在activate前再寫一次原來的equip
-//另外因為是在最後才更換,只要有寫一句就會把所有預設的equip覆蓋
-//還有因為是在最後才更換,上面的取消後搖不用改
-//(重要的事要重複三次)
+原理:
+ 使用eL和eR保存左右手最後選擇,需要更換的裝備
+ 在行動最後使用changeEquip()正式更換
 
-//原理:
-//使用eL和eR保存左右手最後選擇,需要更換的裝備
-//在行動最後使用changeEquip()正式更換
+用途:
+ 防止因更換的裝備不同而打斷原來正在使用的裝備
+  如果更換的裝備是正在使用的裝備就不會改變裝備的狀態,
+  但即使最後的裝備是正在使用的, 中途有不同的裝備也會重置狀態
+
+  取消後搖就是使用這個原理, 在攻擊完成後立即插入不同的裝備,
+  使狀態重置而跳過後搖的時間, 因此取消後搖使用的仍然是預設的裝備指令
+
+注意:
+ 技能需要在activate前寫一次equip, 以確定使用技能的裝備,
+ 而且也需要寫一次selectEquip, 防止最後被changeEquip覆蓋
+
+ 因為是在所有行動選擇後才更換,會把所有預設的裝備指令覆蓋,
+ equip equipL equipR等指令都會失效甚至出現bug
+
+ 以下所有技能都是使用這套邏輯
+*/
 var eL = ""
 var eR = ""
 func selectEquipL(e) //左手,取代equipL
@@ -86,8 +161,186 @@ func changeEquip()
   ?eR
    equipR @eR@
 
+//吸取掉落物
+func starPickup()
+ ?pickup.distance <= 5
+  selectEquip("trisk", "star")
+  return true
+ return false
+
+/* 回甲
+ 在空閒時增加盾量, 比如移動, boss動畫時
+ 先使用回甲快的盾, 當到達上限時再使用提高上限的盾
+
+ 放在左手的裝備主要有
+ 三曲腿("trick"): 移動加速
+ 任務石("quest"): 增加最大盾量(+2)
+*/
+func restoreArmor(L)
+ var speed_maxarmor = speed_shield_value
+ ?L = "quest"
+  speed_maxarmor = speed_maxarmor + 2
+ ?armor >= speed_maxarmor
+  selectEquip(L, value_shield)
+ :
+  selectEquip(L, speed_shield)
+
+/* 疊甲(元素)
+ 裝備A盾並在克制元素的敵人蘇醒時(23~25距離)會增加盾量並且可以突破最大值
+ 在大部分情況下可以有效減少受到的傷害
+*/
+func restoreArmor_element()
+ ?foe = "poison"
+  selectEquipR(ice_shield_A)
+ :?foe = "vigor"
+  selectEquipR(poison_shield_A)
+ :?foe = "aether"
+  selectEquipR(vigor_shield_A)
+ :?foe = "fire"
+  selectEquipR(aether_shield_A)
+ :?foe = "ice"
+  selectEquipR(fire_shield_A)
+
+///////////////////   月石加速   ///////////////////
+/*
+原理:
+	裝備月石時雙手的裝備攻速+5, 使用特定排列可以讓某些攻速的組合更快
+
+	根據前搖速度目前主要有三種組合
+		4 + 4 (+17~20短劍, +21短杖)
+		4 + 3
+		3 + 3 (+21短劍)
+
+注意:
+	攻速藥的攻速加成比月石還高, 喝藥後再使用月石加速會有反效果
+*/
+var moonTimer = -1
+
+/* 4 + 4
+0 - M R
+1 - M R
+2 - M L
+3 - M L
+4 - L R
+*/
+func moondialing_4_4(L, R)
+	moonTimer = totaltime % 5
+	?moonTimer = 0 | moonTimer = 1
+		selectEquip("moon", R)
+	:?moonTimer = 2 | moonTimer = 3
+		selectEquip("moon", L)
+	:?moonTimer = 4
+		selectEquip(L, R)
+
+/* 4(L) + 3(R)
+0 - M R
+1 - R L
+2 - M L
+3 - M R
+4 - R L
+*/
+func moondialing_4_3(L, R)
+	moonTimer = totaltime % 5
+	?moonTimer = 1 | moonTimer = 4
+		selectEquipL(R)
+	:
+		selectEquipL("moon")
+	?moonTimer = 0 | moonTimer = 3
+		selectEquipR(R)
+	:
+		selectEquipR(L)
+
+/* 3 + 3
+0 - M R
+1 - M L
+2 - L R
+*/
+func moondialing_3_3(L, R)
+	moonTimer = totaltime % 3
+	?moonTimer = 0
+		selectEquip("moon", R)
+	:?moonTimer = 1
+		selectEquip("moon", L)
+	:?moonTimer = 2
+		selectEquip(L, R)
+
+///////////////////   攻擊技能   ///////////////////
+
+//墮神
+func BladeSkill()
+ ?item.GetCooldown("blade") <= 0 &
+ ^foe.distance <= 23 & //最遠攻擊距離, 防止連怪都沒看到就開技能
+ ^item.CanActivate()
+  selectEquipT("blade")
+  equip blade
+  activate R
+  return true
+ return false
+
+//跨屏墮神
+func BladeSkill_screenMove()
+ ?item.GetCooldown("blade") <= 0 &
+ ^foe.distance <= 23 & //最遠攻擊距離, 防止連怪都沒看到就開技能
+ ^item.CanActivate()
+  screen.Next() //移動畫面
+  //畫面長度為69, 增加55~56後即可攻擊到大部分敵人, 根據需要可自行調整
+  ?screen.x = screen.i * 69 + 55
+   BladeSkill()
+   screen.ResetOffset() //重置畫面
+   return true
+ return false
+
+//面具
+func maskSkill()
+ ?item.CanActivate() &
+ ^item.GetCooldown("mask") <= 0
+ ^ & foe.distance<24 //如果需要跨屏可以刪掉距離限制
+  selectEquipT("mask")
+  equipR mask
+  activate R
+  return true
+ return false
+
+//骷髏手
+func armSkill()
+ ?buffs.string = "pick_pocket" & //必要buff
+ ^foe.distance > 3 & foe.distance < 9 & //可使用範圍
+ ^item.GetCooldown("skeleton_arm") <= 0 &
+ ^item.CanActivate()
+  selectEquipT("skeleton_arm")
+  equip skeleton_arm
+  activate R
+  return true
+ return false
+
+//大鎚
+func hammerSkill()
+ ?(item.CanActivate() &
+ ^item.GetCooldown("heavy_hammer") <= 0 &
+ ^foe.distance <= 23) | //有效攻擊距離, 防止連怪都沒看到就開技能
+ ^(item.right = "heavy" & //攻擊中, 可能會把普通攻擊誤判為技能使用
+ ^item.right.state = 2)
+  selectEquipT(heavy)
+  equip @heavy@
+  activate R
+  return true
+ return false
+
+//月牙
+func bardicheSkill()
+ ?(item.CanActivate() &
+ ^item.GetCooldown("bardiche") <= 0 &
+ ^foe.distance <= 10) | //有效攻擊距離, 防止連怪都沒看到就開技能
+ ^(item.right = "bardiche" & //攻擊中, 可能會把普通攻擊誤判為技能使用
+ ^item.right.state = 2)
+  selectEquipT(bardiche)
+  equip @bardiche@
+  activate R
+  return true
+ return false
 
 ///////////////////   移動技能   ///////////////////
+
 //木棒衝刺
 func quarterstaffSkill()
  ?item.GetCooldown("quarterstaff") <= 0 &
@@ -96,18 +349,58 @@ func quarterstaffSkill()
   equip quarterstaff
   activate R
   return true
-//盾衝
+ return false
+
+/* 盾衝用法
+ 盾衝主要有2種用法
+
+ //?dashSkill()
+ // return
+ //...
+
+ 上方的用法會先使用盾衝可以盡量保持在近距離的範圍內
+ 由於盾衝中使用的距離是10~16, 因此邏輯上兩種用法的效果是一樣的
+ 但某些boss的近距離攻擊傷害更高, 或者需要特定的移動方式而不適合使用移動技能時
+ 可以使用下方的用法, 先進行檢測, 當有移動的需求才開始使用盾衝
+
+ //?foe.distance <= 10
+ // ...
+ //:?...
+ // ...
+ //:
+ // dashSkill()
+*/
+
+//盾衝(先用普通盾) 普通盾冷却时间短, 对可以多次衝刺/需要赶路的目标(如小怪)时可以先用普通盾
 func dashSkill()
- ?foe.distance > 16
-  ?quarterstaffSkill()
+ //距離在16~10之間時, 嘗試使用盾衝
+ ?foe.distance > 10 & foe.distance <= 16
+  ?item.GetCooldown("dash") <= 0
+   selectEquip("trisk","dash")
    return true
- ?foe.distance > 10
-   ?item.GetCooldown("dash") <= 0
-    selectEquip("trisk","dash")
-    return true
-   :?item.GetCooldown("bash") <= 0
-    selectEquip("trisk","bash")
-    return true
+  ?item.GetCooldown("bash") <= 0
+   selectEquip("trisk","bash")
+   return true
+ //無法盾衝時再嘗試使用木棒衝刺
+ ?quarterstaffSkill()
+  return true
+ //如果技能都用不了就裝上劍盾向前移動
+ restoreArmor("sword")
+ return false
+
+//盾衝(先用遺物盾) 遺物盾能增加盾量, 對不需要多次衝刺的目標(如boss)時可以先用遺物盾
+func bashSkill()
+ //距離在16~10之間時, 嘗試使用盾衝
+ ?foe.distance > 10 & foe.distance <= 16
+  ?item.GetCooldown("bash") <= 0
+   selectEquip("trisk","bash")
+   return true
+  ?item.GetCooldown("dash") <= 0
+   selectEquip("trisk","dash")
+   return true
+ //無法盾衝時再嘗試使用木棒衝刺
+ ?quarterstaffSkill()
+  return true
  //如果技能都用不了就裝上劍盾向前移動
  restoreArmor("sword")
  return false
@@ -117,6 +410,7 @@ func mindSkill()
  ?item.GetCooldown("mind") <= 0
   selectEquip("quest","mind")
   return true
+ return false
 
 ///////////////////   護符技能   ///////////////////
 //火護符
@@ -131,71 +425,202 @@ func fire_talismanSkill()
   equipR fire_talisman
   activate R
   return true
+ return false
 //火精靈技能
-func cinderwispSkill()
+func cinderwispSkill_count(n)
  ?summon.GetId() = "cinderwisp" &
  ^item.GetCooldown("cinderwisp") <= 0 &
- ^summon.GetVar("ignition") = 10
+ ^summon.GetVar("ignition") >= n
   activate cinderwisp
+  return true
+ return false
+/* 火精靈技能(固定層數)
+不同的附魔選擇,適合使用的時間也會不同
+根據需要自行調整
+*/
+func cinderwispSkill()
+ return cinderwispSkill_count(6)
 
+//乙太護符
+func aether_talismanSkill()
+ ?(summon.GetId() ! "voidweaver" &
+ ^item.CanActivate() &
+ ^item.GetCooldown("aether_talisman") <= 0) |
+ ^(item.right="aether_talisman" &
+ ^item.right.state=2)
+  selectEquip("trisk","aether_talisman")
+  equipL trisk
+  equipR aether_talisman
+  activate R
+  return true
+ return false
+//乙太精靈技能
+func voidweaverSkill()
+ ?summon.GetId() = "voidweaver" &
+ ^item.GetCooldown("voidweaver") <= 0
+  activate voidweaver
+  return true
+ return false
 
-/////////////////// debuff計算 ///////////////////
-//冰debuff數量
-var iceCount = 0
-var iceTime = 0
-func getIceData()
- ?foe.debuffs.count
-  var bs = string.Split(foe.debuffs.string,",")
-  for i = 0..bs.Count() - 1
-   ?bs[i] = "debuff_chill"
-    var l = string.Split(bs[i], ":")
-    iceCount = int.parse(l[2])
-    iceTime = int.parse(l[3])
-    return
- iceCount = 0
- iceTime = 0
-//冰debuff效果
+///////////////////   資料計算   ///////////////////
+/*
+ 單個+15短劍攻速為7f一次, 長杖為5f一次
+ 如果附魔等級不足夠可以把時間更改為14f(未附魔攻速)
+*/
+//火debuff
+func needFire() //如果火debuff不存在或者時間小於10f則返回true
+ return //!foe.debuffs.GetCount("debuff_dot") |
+ ^foe.debuffs.GetTime("debuff_dot") <= 10
+
+//毒debuff
+func needPoison() //如果毒debuff不存在或者時間小於10f則返回true
+ return //!foe.debuffs.GetCount("debuff_damage") |
+ ^foe.debuffs.GetTime("debuff_damage") <= 10
+//精淮上毒
+func needPoison_timing(s, t)
+ return needPoison() & timing(s, t - 12)
+
+//冰debuff
+func needIceCount(n) //如果冰debuff小於n或者時間小於10f則返回true
+ return
+ ^foe.debuffs.GetCount("debuff_chill") < n |
+ ^foe.debuffs.GetTime("debuff_chill") <= 10
+func needIce() //目前冰debuff最高為6層
+ return needIceCount(6)
+/*
+ 每層冰debuff增加20/3f 6層為40f
+ 但層數不穩定會使躲避或上毒時間錯誤而導致死亡
+ 因此在冰debuff消失時需要盡快補上
+
+ 或者不要上冰debuff
+*/
 func iceEffect()
- return iceCount*20/3
-func needIce() //未滿6層或者持續時間<10
- return iceCount<6|iceTime<10 
+ return foe.debuffs.GetCount("debuff_chill")
+ ^ * 20 / 3
 
-//毒debuff效果
-var poisonEffect
-poisonEffect=(
-^foe.debuffs.string="debuff_damage")
-//這個timer是boss的攻擊時間,不是角色的攻擊時間
-func needPoison(timer)
- return !poisonEffect & timing(32, timer - 12)
-
-
-///////////////////   行動計算   ///////////////////
-var moonTimer = -1
-func moondialing_21_21(L, R)
- moonTimer = (moonTimer + 1) % 3
- ?moonTimer = 0
-  selectEquip("moon", R)
- :?moonTimer = 1
-  selectEquip(L, "moon")
- :?moonTimer = 2
-  selectEquip(L, R)
+/* boss攻擊循環
+ 一些boss會以某種循環方式使用相同的for.state但不同的方式進行攻擊
+ 這種情況下可以使用attackLoop紀錄攻擊次數以進行應對
+*/
+var attackLoop = -1
+//重置循環計算
+func resetAttackLoop()
+ attackLoop = -1
+ return attackLoop
+//下一次攻擊計算
+//loopCount為每次循環的攻擊次數
+func nextAttackLoop(loopCount)
+ attackLoop = (attackLoop + 1) % loopCount
+ return attackLoop
 
 //應對時機
 func timing(s, t)
  return foe.state=s & foe.time>=t+iceEffect()
 
+///////////////////    藥水    ///////////////////
+//選藥, 放在一起方便改
+func brewPotion()
+ //brew stone + bronze //lucky(爆擊)
+ //brew wood + bronze //berserk(攻速)
+ //brew tar + bronze //vampiric(吸血)
+ //brew stone //strength(擊暈+破甲)
+ //brew stone + wood //invisibility(閃避)
+ //brew tar + wood //cleansing(清debuff)
+ brew tar + stone //strength(回甲)
+ //brew tar //healing(回血)
+ //brew bronze //lightning(aoe傷害)
+ //brew wood //experience(經驗)
+ return
+
+///////////////////    行動    ///////////////////
+
+/* 開局行動
+ 當第一場開局時可以設定藥水和直接滿甲
+ 並且這時候大部分行動和技能都不能使用
+ 因此這部分獨立執行
+*/
+func beginAction()
+ //選藥水
+ brewPotion()
+
+ //第一埸開局會直接滿甲, 記得帶上限最高的盾
+ selectEquip("quest",value_shield)
+
+
+
+//行动
+func action()
+ //火精靈技能(能用就用, 不能用也不要緊)
+ cinderwispSkill()
+
+ //吸取掉落物
+ ?starPickup()
+  return
+
+ //動畫中回甲
+ ?!ai.enabled | ai.paused
+  //重置循環計算
+  resetAttackLoop()
+
+  restoreArmor("quest")
+  return
+ 
+ 
+ /*
+ 如有需要可以在以上增加所需的行動並加入return使以下的內容不執行
+ */
+
+ /*
+ 注意: 
+ 以下的內容將會移動到各自的func中執行, 沒有必要不需要更改
+ 但某些黃星的生怪類小boss會被擋住, 可能需要自行增加檢測方式
+ */
+
+ //跑路
+ ?foe.distance > 25
+  run()
+ :
+  ?foe = "phase1" ////第1階段////
+   boss_1()
+  :?foe = "phase2" ////第2階段////
+   boss_2()
+  :?foe = "phase3" ////第3階段////
+   boss_3()
+  :?foe = "boss" ////小boss////
+   boss_0()
+  :
+   attack()
+
+
+
+///////////////////    跑路    ///////////////////
+
+func run()
+
+ //木棒加速
+ ?quarterstaffSkill()
+  return
+
+ //召唤火精靈
+ ?fire_talismanSkill()
+  return
+
+ //回甲
+ restoreArmor("trisk")
 
 ///////////////////    小怪    ///////////////////
+//高原沒有小怪, 直接跳過
 func attack()
- return //高原沒有小怪, 直接跳過
+ return
 
 ///////////////////  小 boss  ///////////////////
 func boss_0()
+
  ?foe.distance <= 10
   //上debuff
   ?needIce()
    selectEquipT(ice)
-  :?needPoison(14)
+  :?needPoison_timing(32, 14)
    selectEquipT(poison)
   : //輸出
    selectEquip(vigor1,vigor2)
@@ -204,13 +629,14 @@ func boss_0()
 
 ///////////////////   第1階段   ///////////////////
 func boss_1()
+ 
  ?foe.distance <= 10
   //上debuff
   ?needIce()
    selectEquipT(ice)
-  :?needPoison(24)
+  :?needPoison_timing(32, 24)
    selectEquipT(poison)
-  
+
   //回血
   :?hp < maxhp * 3 / 4
    selectEquip(vigor1,vigor2)
@@ -221,6 +647,7 @@ func boss_1()
 
 ///////////////////   第2階段   ///////////////////
 func boss_2()
+
  ?foe.distance <= 10
   ?foe = "poison"
    selectEquipT(ice)
@@ -242,16 +669,18 @@ func boss_2()
    ?needIce()
     selectEquipT(ice)
    //體力屬性是回血+免疫debuff, 不需要上毒
-   :?needPoison(59) & foe ! "vigor"
+   :?needPoison_timing(32, 59) & foe ! "vigor"
     selectEquipT(poison)
+
  :
   dashSkill()
 
 ///////////////////   第3階段   ///////////////////
 func boss_3()
+ 
  //攻擊循環+1 (0~5)
  ?(foe.state=32 | foe.state=115) & !foe.time
-  attackLoop = (attackLoop + 1) % 6
+  nextAttackLoop(6)
 
  ?(foe.state = 115 & foe.time > 76) | //激光(距離>=5時有效)
  ^attackLoop=2&foe.distance<8&timing(32,27) //擊暈
@@ -260,12 +689,7 @@ func boss_3()
 
  //大鎚技能削減盾量
  ?attackLoop = 2 & timing(32,12)
-  //大鎚
-  ?item.GetCooldown("hammer") <= 0 |
-  ^(item.right="heavy"&item.right.state=2)
-   selectEquipT("heavy")
-   equip heavy
-   activate R
+  ?hammerSkill()
    return
 
  ?foe.distance <= 10
@@ -284,7 +708,8 @@ func boss_3()
   ?needIce() //上冰
    selectEquipT(ice)
   //上毒, 但跳過可以躲避的技能
-  :?needPoison(49) & attackLoop!2&attackLoop!5
+  :?needPoison_timing(32, 49) &
+  ^attackLoop ! 2 & attackLoop ! 5
    selectEquipT(poison)
 
   //先用傷害較低的屬性, 以應對第一次開盾的屬性免疫
@@ -298,7 +723,6 @@ func boss_3()
  :
   dashSkill()
 
-
  //如果有回復藥就在結束回滿血, 以防萬一
  ?(item.potion = "healing" & hp < maxhp &
  ^(foe.hp + foe.armor) < 1000 & (foe.state=33 |
@@ -310,62 +734,20 @@ func boss_3()
 
 
 ///////////////////   主要行動   ///////////////////
+
 func main()
- getIceData()
- cinderwispSkill()
-
  ?totaltime <= 1
-  brew tar + stone //回甲藥
-  //brew tar //回血藥
-
-  //第一埸開局會直接滿甲
-  selectEquip("quest",value_shield)
-  return
-
- //吸取掉落物
- ?pickup.distance <= 5
-  selectEquip("trisk","star")
-
- //跑路
- :?foe.distance > 23
-  ?quarterstaffSkill()
-   return
-
-  ?!summon.GetId()
-   ?fire_talismanSkill()
-    return
-
-  restoreArmor("trisk")
-
- //動畫
- :?!ai.enabled
-  //重置循環計算
-  attackLoop = -1
-
-  restoreArmor("quest")
-
- ////第1階段////
- :?foe = phase1
-  boss_1()
-
- ////第2階段////
- :?foe = phase2
-  boss_2()
-
- ////第3階段////
- :?foe = phase3
-  boss_3()
-
- ////小boss////
- :?foe = boss
-  boss_0()
-
- ////小怪////
- /* 高原沒有小怪, 這句用不了
+  beginAction()
  :
-  attack()
- */
+  action()
 
  //更換裝備
  changeEquip()
+
+ show()
+
+// 顯示
+func show()
+ return
+
 main()

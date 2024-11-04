@@ -3,30 +3,26 @@ SSRPG version: 4.3
 date: 2024/11/01
 */
 /* 簡介
- 如何使用9件+15和2件+21裝備通關15高原?
+ 如何速通15高原?
 
- 本模板的理論速度平均約2分半
+ 本模板的理論速度平均約1分半
 
  內部新增了大量func以及會對預設代碼造成干擾的機制
  如要修改代碼請先閱讀並理解運行方式, 否則有可能無法運行
 
  需求+21装備
-  火 D 短劍(附魔攻速) x2
-
- 需求+15装備
-  毒 dP 長杖(附魔攻速)
-  毒 D 短劍(附魔攻速)
+  五屬 D 短劍(附魔攻速) x2
+  毒 dP 短劍(附魔攻速)
   體力 dL 短劍(附魔攻速) x2
-  乙太 D 短劍(附魔攻速) x2
-  冰 D 短劍(附魔攻速)
-  冰 dI 長杖(附魔攻速)
-  大鎚(附魔鎧甲疲勞)
+  冰 dI 短劍(附魔攻速)
+  面具(附魔續buff)
+  複合盾(附魔回甲)
+  複合盾(附魔上限)
   
- 除+15以外的必要裝備
+ 除+21以外的必要裝備
   鐵頭木棒
   前衝之盾
   打擊之盾
-  複合盾(最好滿星或以上)
   火護符
 */
 
@@ -72,7 +68,7 @@ date: 2024/11/01
 */
 
 ///////////////////    裝備    ///////////////////
-/* 除+15以外的必要裝備
+/* 除+21以外的必要裝備
 鐵頭木棒
 前衝之盾
 打擊之盾
@@ -80,38 +76,42 @@ date: 2024/11/01
 火護符
 */
 
-//毒屬性:
-//攻速 dP 長杖 *10 +15 
-var poison = "poison staff dP *10"
-//攻速 D 短劍 *10 +15
-var poisonD = "poison sword D *10"
-//體力屬性: 攻速 dL 短劍 *10 +13~15 *2
-var vigor1 = "vigor sword dL *10 shiny"
-var vigor2 = "vigor sword dL *10 -shiny"
-//乙太屬性: 攻速 D 短劍 *10 +13~15 *2
-var aether1 = "aether sword D *10 shiny"
-var aether2 = "aether sword D *10 -shiny"
-//火屬性: 攻速 D 短劍 *10 +13~15 *2
-var fire1 = "fire sword D *10 +21 shiny"
-var fire2 = "fire sword D *10 +21 -shiny"
-//冰屬性:
-//攻速 dI 長杖 *10 +15
-var ice = "ice staff dI *10"
-//攻速 D 短劍 *10 +15
-var iceD = "ice sword D *10"
+//五屬 D 短劍(附魔攻速) *10 +21 *2
+var poison1 = "poison sword D shiny -long"
+var poison2 = "poison sword D -shiny -long"
 
-//技能用大鎚(附魔鎧甲疲勞) *10 +15
+var vigor1 = "vigor sword D shiny -long"
+var vigor2 = "vigor sword D -shiny -long"
+
+var aether1 = "aether sword D shiny -long"
+var aether2 = "aether sword D -shiny -long"
+
+var fire1 = "fire sword D shiny -long"
+var fire2 = "fire sword D -shiny -long"
+
+var ice1 = "ice sword D shiny -long"
+var ice2 = "ice sword D -shiny -long"
+
+//毒 dP 短劍 *10 +21
+var dP = "poison sword dP -long"
+//體力 dL 短劍 *10 +21 *2
+var dL1 = "vigor sword dL shiny -long"
+var dL2 = "vigor sword dL -shiny -long"
+//冰 dI 短劍 *10 +21
+var dI = "ice sword dI -long"
+
+//技能用月牙
+var bardiche = "bardiche shiny"
+//技能用大鎚
 var heavy = "heavy hammer *10"
 
-//技能用月牙(並沒有在使用)
-var bardiche = "bardiche"
-
-//回甲最快的盾
-var speed_shield = "compound *10"
+//回甲最快的盾 *10 +21
+var speed_shield = "compound -shiny"
 //回甲最快的盾的上限
 var speed_shield_value = 14
-//上限最高的盾
-var value_shield = "compound *10"
+//上限最高的盾 *10 +21
+var value_shield = "compound shiny"
+
 
 //五屬A盾(並沒有在使用)
 var poison_shield_A = "poison shield A"
@@ -119,6 +119,20 @@ var vigor_shield_A = "vigor shield A"
 var aether_shield_A = "aether shield A"
 var fire_shield_A = "fire shield A"
 var ice_shield_A = "ice shield A"
+
+///////////////////   初始变量   ///////////////////
+
+/* 疊藥開關
+注意:
+ 目前只有黃星或以上才可以疊藥
+
+ 必須確保已有+21面具的無限buff效果和只用左手也能打完一場的能力
+ 否則藥效可能不足夠持續到下一場
+*/
+var needStackPotion = loc.stars > 10 & true
+
+//紀錄是否開始boss戰
+var bossStart = false
 
 ///////////////////   更換裝備   ///////////////////
 
@@ -529,15 +543,57 @@ func timing(s, t)
  return foe.state=s & foe.time>=t+iceEffect()
 
 ///////////////////    藥水    ///////////////////
+/*
+檢查是否需要疊藥
+
+需要先開啟needStackPotion確定
+當藥效比平均時間短時開始疊藥
+
+如果沒有打過的時間會是-1, 所以需要額外判斷平均時間是否小於0
+*/
+var stackPotion = false
+func checkStackPotion()
+ stackPotion = needStackPotion &
+ ^(loc.averageTime < 0 |
+ ^getPotionTime() < loc.averageTime)
+ return stackPotion
+
+/*
+疊藥用, 如果在用星石吸箱子或者開關打開時喝藥
+通常情況下只有一開始和拿箱子時才會有藥,
+如果是暴擊藥這種可以另外提供效果而需要在特定時間使用的則需要額外判斷
+*/
+func useStackPotion()
+ ?item.potion ! "empty" &
+ ^((item.right = "star" & bossStart)
+ ^| stackPotion)
+  activate potion
+  return true
+
+func getPotionTime()
+ ?buffs.GetTime("vampiric") //吸血
+  return buffs.GetTime("vampiric")
+ ?buffs.GetTime("berserk") //攻速
+  return buffs.GetTime("berserk")
+ ?buffs.GetTime("strength") //破甲
+  return buffs.GetTime("strength")
+ ?buffs.GetTime("invisibility") //閃避
+  return buffs.GetTime("invisibility")
+ ?buffs.GetTime("lucky_crit") //爆擊
+  return buffs.GetTime("lucky_crit")
+ ?buffs.GetTime("experience") //經驗
+  return buffs.GetTime("experience")
+ return 0
+
 //選藥, 放在一起方便改
 func brewPotion()
- //brew stone + bronze //lucky(爆擊)
+ brew stone + bronze //lucky(爆擊)
  //brew wood + bronze //berserk(攻速)
  //brew tar + bronze //vampiric(吸血)
  //brew stone //strength(擊暈+破甲)
  //brew stone + wood //invisibility(閃避)
  //brew tar + wood //cleansing(清debuff)
- brew tar + stone //strength(回甲)
+ //brew tar + stone //strength(回甲)
  //brew tar //healing(回血)
  //brew bronze //lightning(aoe傷害)
  //brew wood //experience(經驗)
@@ -557,10 +613,16 @@ func beginAction()
  //第一埸開局會直接滿甲, 記得帶上限最高的盾
  selectEquip("quest",value_shield)
 
+ checkStackPotion()
+
+ bossStart = false
 
 
 //行动
 func action()
+ ?foe = phase1 & foe.hp ! foe.maxhp
+  bossStart = true
+
  //火精靈技能(能用就用, 不能用也不要緊)
  cinderwispSkill()
 
@@ -573,7 +635,11 @@ func action()
   //重置循環計算
   resetAttackLoop()
 
-  restoreArmor("quest")
+  ?stackPotion
+   selectEquip("quest", "mask")
+  :
+   restoreArmor("quest")
+
   return
  
  
@@ -590,6 +656,18 @@ func action()
  //跑路
  ?foe.distance > 25
   run()
+  //疊藥
+ :?stackPotion
+  ?foe = phase1 ////第1階段////
+   boss_1_stackPotion()
+  :?foe = phase2 ////第2階段////
+   boss_2_stackPotion()
+  :?foe = phase3 ////第3階段////
+   boss_3_stackPotion()
+  :?foe = boss ////小boss////
+   boss_0_stackPotion()
+  :
+   attack_stackPotion()
  :
   ?foe = "phase1" ////第1階段////
    boss_1()
@@ -605,7 +683,6 @@ func action()
 
 
 ///////////////////    跑路    ///////////////////
-
 func run()
 
  //木棒加速
@@ -616,129 +693,171 @@ func run()
  ?fire_talismanSkill()
   return
 
- //回甲
- restoreArmor("trisk")
+ //開始疊藥
+ useStackPotion()
+
+ //如果在疊藥就拿面具, 否則拿盾回甲
+ ?stackPotion
+  selectEquip("trisk", "mask")
+ :
+  restoreArmor("trisk")
 
 ///////////////////    小怪    ///////////////////
 //高原沒有小怪, 直接跳過
 func attack()
  return
 
+func attack_stackPotion()
+ return
+
 ///////////////////  小 boss  ///////////////////
 func boss_0()
 
  ?foe.distance <= 10
-  //上debuff
-  ?needIce()
-   selectEquipT(ice)
-  :?needPoison_timing(32, 14)
-   selectEquipT(poison)
-  : //輸出
-   moondialing_3_3(fire1, fire2)
+  ?hp ! maxhp
+   moondialing_3_3(dL1, dL2)
+  :
+   moondialing_3_3(dP, dI)
  :
-  dashSkill()
+  bashSkill()
+
+//疊藥
+func boss_0_stackPotion()
+ ?foe.distance <= 10
+  ?needPoison()
+   selectEquip(dP, "mask")
+  :
+   selectEquip(dI, "mask")
+ :
+  bashSkill()
 
 ///////////////////   第1階段   ///////////////////
 func boss_1()
- 
  ?foe.distance <= 10
-  //上debuff
-  ?needIce()
-   selectEquipT(ice)
-  :?needPoison_timing(32, 24)
-   selectEquipT(poison)
-
-  //回血
-  :?hp < maxhp * 3 / 4
-   selectEquip(vigor1,vigor2)
-  : //輸出
-   moondialing_3_3(fire1, fire2)
+  ?hp ! maxhp
+   moondialing_3_3(dL1, dL2)
+  :
+   moondialing_3_3(dP, dI)
  :
-  dashSkill()
+  bashSkill()
+
+//疊藥
+func boss_1_stackPotion()
+ ?foe.distance <= 10
+  ?needPoison()
+   selectEquip(dP, "mask")
+  :?needIce()
+   selectEquip(dI, "mask")
+  ://?hp ! maxhp
+   selectEquip(dL1, "mask")
+ :
+  bashSkill()
 
 ///////////////////   第2階段   ///////////////////
 func boss_2()
-
  ?foe.distance <= 10
   ?foe = "poison"
-   selectEquip(iceD,vigor1)
+   moondialing_3_3(ice1, ice2)
   :?foe = "vigor"
-   selectEquip(poisonD,vigor1)
+   moondialing_3_3(poison1, poison2)
   :?foe = "aether"
-   selectEquip(vigor1,vigor2)
+   moondialing_3_3(vigor1, vigor2)
   :?foe = "fire"
-   selectEquip(aether1,aether2)
+   moondialing_3_3(aether1, aether2)
   :?foe = "ice"
    moondialing_3_3(fire1, fire2)
-
-  //在被攻擊前截斷上debuff的裝備, 以免自家吃debuff
-  ?timing(32,57)
-   return
-
-  //如果沒有免疫就上debuff
-  ?foe.buffs.string ! "buff_protection"
-   ?needIce()
-    selectEquipT(ice)
-   //體力屬性是回血+免疫debuff, 不需要上毒
-   :?needPoison_timing(32, 59) & foe ! "vigor"
-    selectEquipT(poison)
-
  :
-  dashSkill()
+  bashSkill()
+
+//疊藥
+func boss_2_stackPotion()
+ ?foe.distance <= 10
+  ?foe = "poison"
+   selectEquip(ice1, "mask")
+  :?foe = "vigor"
+   selectEquip(poison1, "mask")
+  :?foe = "aether"
+   selectEquip(vigor1, "mask")
+  :?foe = "fire"
+   selectEquip(aether1, "mask")
+  :?foe = "ice"
+   selectEquip(fire1, "mask")
+
+  //boss攻擊前根據需要上冰或者回血
+  ?foe.time < 30 + iceEffect()
+   ?hp ! maxhp
+    selectEquip(dL1, "mask")
+   ?!foe.buffs.GetCount("buff_protection")
+    ?needIce()
+     selectEquip(dI, "mask")
+ :
+  bashSkill()
 
 ///////////////////   第3階段   ///////////////////
 func boss_3()
- 
+ //上一層冰後喝暴擊藥打傷害
+ ?foe.distance <= 10
+  ?foe.hp = foe.maxhp
+   selectEquip("moon", dI)
+   return
+
+  ?item.potion ! "empty"
+   activate potion
+
+  //哪一對小劍傷害高就用那個
+  moondialing_3_3(poison1, poison2)
+ :
+  bashSkill()
+
+//疊藥
+func boss_3_stackPotion()
  //攻擊循環+1 (0~5)
  ?(foe.state=32 | foe.state=115) & !foe.time
   nextAttackLoop(6)
 
- ?(foe.state = 115 & foe.time > 76) | //激光(距離>=5時有效)
- ^attackLoop=2&foe.distance<8&timing(32,27) //擊暈
-  ?mindSkill()
-   return
-
- //大鎚技能削減盾量
- ?attackLoop = 2 & timing(32,12)
-  ?hammerSkill()
-   return
+ //擊晕
+ ?attackLoop = 2 &
+ ^timing(32, 27) &
+ ^foe.distance < 8
+  mindSkill()
+  return
 
  ?foe.distance <= 10
-  ?foe.buffs.count
-   //如果有攻擊型的藥水就在第一次開盾後使用
-   ?item.potion = "berserk" |
-   ^item.potion = "lucky"
-    activate potion
+  //大鎚技能削減盾量
+  ?attackLoop = 2 & timing(32, 12)
+   ?hammerSkill()
+    return
 
-  ?hp < maxhp
-   selectEquip(vigor1,vigor2)
-  :?!foe.buffs.count
-   selectEquip(aether1,aether2)
-  :
-   moondialing_3_3(fire1, fire2)
+  //boss普攻前上毒減傷
+  ?attackLoop ! 2 & timing(32, 39)
+   ?maskSkill()
+    return
+   ?needPoison()
+    selectEquip(dP, "mask")
+    return
 
-  ?(buffs.string = "berserk" |
-  ^buffs.string = "lucky")
+  //上冰
+  ?needIce()
+   selectEquip(dI, "mask")
    return
 
-  ?needIce() //上冰
-   selectEquipT(ice)
-  //上毒, 但跳過可以躲避的技能
-  :?needPoison_timing(32, 49) &
-  ^attackLoop ! 2 & attackLoop ! 5
-   selectEquipT(poison)
+  ?!foe.buffs.GetCount(
+  ^"adaptive_defense_poison")
+   selectEquip(poison1, "mask")
+  :?!foe.buffs.GetCount(
+  ^"adaptive_defense_vigor")
+   selectEquip(vigor1, "mask")
+  :?!foe.buffs.GetCount(
+  ^"adaptive_defense_aether")
+   selectEquip(aether1, "mask")
+  :?!foe.buffs.GetCount(
+  ^"adaptive_defense_fire")
+   selectEquip(fire1, "mask")
+  :?!foe.buffs.GetCount(
+  ^"adaptive_defense_ice")
+   selectEquip(ice1, "mask")
  :
-  dashSkill()
-
- //如果有回復藥就在結束回滿血, 以防萬一
- ?(item.potion = "healing" & hp < maxhp &
- ^(foe.hp + foe.armor) < 1000 & (foe.state=33 |
- ^attackLoop = 2 | attackLoop = 5)) |
-
- ^(item.potion = "defensive" &
- ^(foe.hp + foe.armor) < 15000)
-  activate potion
-
+  bashSkill()
 
 ///////////////////   主要行動   ///////////////////
 
